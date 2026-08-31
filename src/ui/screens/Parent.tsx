@@ -4,8 +4,7 @@ import { SKILLS, STRAND_NAMES, getSkill } from '../../engine/skills';
 import { ERROR_COACHING, ERROR_LABELS } from '../../engine/errors';
 import { progressToward } from '../../engine/mastery';
 import { AVATAR_OPTIONS, exportAll, importAll } from '../../store/db';
-import { buildWeeklyDigest, fetchWeeklySummary } from '../../llm/weeklySummary';
-import { hintServiceAvailable } from '../../llm/hints';
+import { buildWeeklyDigest } from '../../llm/weeklySummary';
 import type { Attempt, ErrorType, SkillState } from '../../engine/types';
 
 export function Parent() {
@@ -391,10 +390,7 @@ export function Parent() {
 /**
  * The weekly note.
  *
- * The digest is computed locally and always shown; the written summary is an
- * optional layer on top. That ordering is deliberate — the numbers are the
- * thing you'd act on, and they must not depend on an API key, a network, or a
- * model being available. The model interprets; it never supplies data.
+ * The digest is computed and displayed locally on the device.
  */
 function WeeklyTab({
   attempts,
@@ -407,24 +403,6 @@ function WeeklyTab({
     () => buildWeeklyDigest(attempts, skillStates),
     [attempts, skillStates],
   );
-  const [summary, setSummary] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [available, setAvailable] = useState(false);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    void hintServiceAvailable().then(setAvailable);
-  }, []);
-
-  const write = async () => {
-    setLoading(true);
-    setFailed(false);
-    const text = await fetchWeeklySummary(digest);
-    setSummary(text);
-    setFailed(text === null);
-    setLoading(false);
-  };
-
   if (digest.totalAttempts === 0) {
     return (
       <div className="card">
@@ -449,31 +427,9 @@ function WeeklyTab({
 
       <div className="card">
         <h3>Written note</h3>
-        {summary ? (
-          <p className="small" style={{ margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-            {summary}
-          </p>
-        ) : (
-          <>
-            <p className="small dim" style={{ marginTop: 0 }}>
-              {available
-                ? 'Claude reads the figures below — it is given every number already computed and told not to do any arithmetic of its own — and writes a short honest note about what changed and what to help with.'
-                : 'Needs an API key to write the note. The figures below are computed locally and are complete without it — see the README to enable hints.'}
-            </p>
-            <button
-              className="btn btn-primary"
-              disabled={!available || loading}
-              onClick={() => void write()}
-            >
-              {loading ? 'Writing…' : 'Write this week’s note'}
-            </button>
-            {failed ? (
-              <p className="small dim" style={{ marginBottom: 0 }}>
-                Could not reach the model. The figures below are unaffected.
-              </p>
-            ) : null}
-          </>
-        )}
+        <p className="small dim" style={{ margin: 0 }}>
+          This report is generated on this device from recorded sessions. It never sends play or progress data to a service.
+        </p>
       </div>
 
       <div className="card">

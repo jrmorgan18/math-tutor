@@ -5,7 +5,6 @@ import { ProblemView } from '../components/ProblemView';
 import { HintVisualView } from '../components/HintVisualView';
 import { sfx } from '../audio';
 import { cancelSpeech, speak } from '../tts';
-import { fetchAlternateHint, hintServiceAvailable } from '../../llm/hints';
 import { getSkill } from '../../engine/skills';
 import { derivePredict } from '../../engine/predict';
 import { openingRung } from '../../engine/adaptiveHints';
@@ -39,12 +38,8 @@ export function Session() {
   const abandonSession = useStore((s) => s.abandonSession);
 
   const [entry, setEntry] = useState('');
-  const [aiHint, setAiHint] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiAvailable, setAiAvailable] = useState(false);
   const [predictPick, setPredictPick] = useState<'Bigger' | 'Smaller' | null>(null);
   const [reflectPick, setReflectPick] = useState<ReflectBucket | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
   /**
    * The authoritative current entry. React state alone is not enough: two
    * rapid taps land in the same render batch and would both read the same
@@ -57,19 +52,12 @@ export function Session() {
     setEntry(next);
   };
 
-  useEffect(() => {
-    void hintServiceAvailable().then(setAiAvailable);
-  }, []);
-
   const itemKey = `${session?.index}-${session?.problem?.seed}`;
   useEffect(() => {
     entryRef.current = '';
     setEntry('');
-    setAiHint(null);
-    setAiLoading(false);
     setPredictPick(null);
     setReflectPick(null);
-    abortRef.current?.abort();
   }, [itemKey]);
 
   /**
@@ -107,11 +95,6 @@ export function Session() {
     const latest = p.hints[hintsUsedNow - 1];
     if (latest) speak(latest.text, true);
   }, [hintsUsedNow, itemKey, readAloud, session?.problem]);
-
-  useEffect(() => {
-    if (!readAloud || !aiHint) return;
-    speak(aiHint, true);
-  }, [aiHint, readAloud]);
 
   const showingReflect =
     session?.phase === 'feedback' &&
@@ -154,24 +137,7 @@ export function Session() {
     void submitAnswer(value, timedOut);
   };
 
-  const requestHint = async () => {
-    const nextRung = hintsUsed + 1;
-    const isLastRung = nextRung >= problem.hints.length;
-
-    if (isLastRung && aiAvailable && !aiHint) {
-      setAiLoading(true);
-      const controller = new AbortController();
-      abortRef.current = controller;
-      const text = await fetchAlternateHint(
-        { problem, given: entry, errorType: 'other' },
-        controller.signal,
-      );
-      setAiLoading(false);
-      if (text) {
-        setAiHint(text);
-        return;
-      }
-    }
+  const requestHint = () => {
     useHint();
   };
 
@@ -300,16 +266,6 @@ export function Session() {
           ))
         : null}
 
-      {!answered && !predictPending && aiHint ? (
-        <div className="hint ai">
-          <button className="hint-speak" onClick={() => speak(aiHint, true)} aria-label="Read this hint aloud">
-            🔊
-          </button>
-          <span className="hint-label">Another way to see it</span>
-          {aiHint}
-        </div>
-      ) : null}
-
       {/* ----------------------------------------------- feedback */}
       {answered && lastResult && !showingReflect ? (
         <div className={lastResult.correct ? 'feedback correct' : 'feedback wrong'}>
@@ -404,10 +360,10 @@ export function Session() {
             <div className="row" style={{ marginBottom: 10 }}>
               <button
                 className="btn btn-ghost grow"
-                disabled={aiLoading || (ladderExhausted && !!aiHint)}
-                onClick={() => void requestHint()}
+                disabled={ladderExhausted}
+                onClick={requestHint}
               >
-                {aiLoading ? 'Thinking…' : hintsUsed === 0 ? '💡 I’m stuck' : '💡 Another hint'}
+                {hintsUsed === 0 ? '💡 I’m stuck' : '💡 Another hint'}
               </button>
               {ladderExhausted ? (
                 <button className="btn btn-ghost" onClick={() => submit('', true)}>
