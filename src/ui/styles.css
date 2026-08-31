@@ -1,0 +1,1351 @@
+/* Genesis Lab — dark research-lab palette, sized for a tablet held in two hands. */
+
+:root {
+  --bg: #0d1117;
+  --bg-raised: #161c26;
+  --bg-card: #1d2530;
+  --line: #2b3644;
+  --text: #e6edf3;
+  --text-dim: #93a1b1;
+  --amber: #f0b429;
+  --amber-dim: #7a5c15;
+  --green: #3fb950;
+  --green-dim: #12351a;
+  --red: #e5534b;
+  --red-dim: #3a1614;
+  --cyan: #39c5cf;
+  --violet: #a371f7;
+  --radius: 16px;
+  --tap: 64px;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-rounded, 'SF Pro Rounded', 'Segoe UI', system-ui, -apple-system,
+    sans-serif;
+  font-size: 18px;
+  line-height: 1.5;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+}
+
+/* ------------------------------------------------------------------ type */
+h1 {
+  font-size: 30px;
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+}
+h2 {
+  font-size: 22px;
+  margin: 0 0 10px;
+}
+h3 {
+  font-size: 17px;
+  margin: 0 0 8px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+p {
+  margin: 0 0 12px;
+}
+.dim {
+  color: var(--text-dim);
+}
+.small {
+  font-size: 15px;
+}
+.mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------- buttons */
+button {
+  font: inherit;
+  color: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.btn {
+  min-height: var(--tap);
+  padding: 0 24px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  font-size: 19px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: transform 0.06s ease, background 0.15s ease;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.4;
+}
+.btn-primary {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: #1a1205;
+}
+.btn-ghost {
+  background: transparent;
+}
+.btn-wide {
+  width: 100%;
+}
+.btn-lg {
+  min-height: 76px;
+  font-size: 22px;
+}
+
+/* ----------------------------------------------------------------- cards */
+.card {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.between {
+  justify-content: space-between;
+}
+.grow {
+  flex: 1;
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.center {
+  text-align: center;
+}
+
+/* -------------------------------------------------------------- topbar */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 2px;
+  gap: 12px;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------------------- problem */
+.problem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 0;
+  min-height: 210px;
+}
+.problem-text {
+  font-size: 40px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+}
+/* Word problems are prose, not an equation — smaller and left-aligned reads
+   far better than a giant centred wall of text. */
+.problem-text.prose {
+  font-size: 23px;
+  font-weight: 500;
+  text-align: left;
+  line-height: 1.45;
+}
+.problem-sub {
+  font-size: 18px;
+  color: var(--text-dim);
+  text-align: center;
+  white-space: pre-line;
+}
+.problem-sub.grid {
+  font-size: 27px;
+  letter-spacing: 10px;
+  line-height: 1.35;
+  color: var(--cyan);
+}
+
+/* ---------------------------------------------------- stacked arithmetic */
+.stack-problem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.stack-row {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+.stack-op {
+  display: inline-block;
+  width: 22px;
+  text-align: center;
+  color: var(--cyan);
+}
+.stack-num {
+  display: inline-block;
+  min-width: 2ch;
+  text-align: right;
+}
+.stack-line {
+  width: 100%;
+  border-top: 3px solid var(--text);
+  margin-top: 6px;
+}
+
+.answer-box {
+  min-width: 190px;
+  min-height: 72px;
+  border-radius: var(--radius);
+  border: 2px solid var(--line);
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 38px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 0 20px;
+}
+.answer-box.correct {
+  border-color: var(--green);
+  background: var(--green-dim);
+}
+.answer-box.wrong {
+  border-color: var(--red);
+  background: var(--red-dim);
+}
+.answer-box .placeholder {
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+
+/* -------------------------------------------------------------- keypad */
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding-bottom: 14px;
+}
+.key {
+  min-height: 68px;
+  border-radius: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  font-size: 28px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: transform 0.05s ease, background 0.12s ease;
+}
+.key:active {
+  transform: scale(0.94);
+  background: var(--line);
+}
+.key-go {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: #1a1205;
+}
+.key-go:disabled {
+  background: var(--bg-card);
+  border-color: var(--line);
+  color: var(--text-dim);
+}
+
+/* -------------------------------------------------------------- buildpad */
+.buildpad {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 14px;
+  align-items: center;
+}
+.build-tenframe {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  padding: 8px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+}
+.build-array {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.build-cell {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--bg-card);
+  transition: transform 0.06s ease, background 0.12s ease;
+}
+.build-cell.filled {
+  background: var(--cyan);
+  border-color: var(--cyan);
+}
+.build-cell:active {
+  transform: scale(0.9);
+}
+.build-count {
+  min-width: 68px;
+  min-height: 56px;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------- choices */
+.choices {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding-bottom: 14px;
+}
+.choice {
+  min-height: 78px;
+  border-radius: 14px;
+  background: var(--bg-card);
+  border: 2px solid var(--line);
+  font-size: 24px;
+  font-weight: 600;
+  padding: 10px 14px;
+  transition: transform 0.05s ease;
+}
+.choice:active {
+  transform: scale(0.96);
+}
+.choice.picked-correct {
+  border-color: var(--green);
+  background: var(--green-dim);
+}
+.choice.picked-wrong {
+  border-color: var(--red);
+  background: var(--red-dim);
+}
+.choice.reveal {
+  border-color: var(--green);
+}
+.choices.wide {
+  grid-template-columns: 1fr;
+}
+
+/* ------------------------------------------------------ predict / reflect */
+.interstitial {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 12px;
+}
+.interstitial-question {
+  font-size: 19px;
+  font-weight: 600;
+  margin-bottom: 14px;
+  text-align: center;
+}
+.interstitial-choices {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.interstitial-choices.stack {
+  grid-template-columns: 1fr;
+}
+.interstitial-choice {
+  min-height: 60px;
+  border-radius: 14px;
+  background: var(--bg-raised);
+  border: 2px solid var(--line);
+  font-size: 18px;
+  font-weight: 600;
+  padding: 10px 14px;
+}
+.interstitial-choice:active {
+  transform: scale(0.97);
+}
+.hint-speak {
+  float: right;
+  min-height: 28px;
+  padding: 0 8px;
+  font-size: 15px;
+  border-radius: 8px;
+  color: var(--text-dim);
+}
+
+/* ------------------------------------------------------- hint visuals */
+.viz {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+.viz-svg {
+  width: 100%;
+  max-width: 330px;
+  height: auto;
+}
+.viz-label {
+  fill: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+}
+.viz-label-accent {
+  fill: var(--cyan);
+}
+.viz-caption {
+  font-size: 13px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* stacked columns */
+.viz-stacked {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.25;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.viz-stacked-row {
+  display: flex;
+  gap: 12px;
+  white-space: pre;
+}
+.viz-stacked-op {
+  display: inline-block;
+  width: 18px;
+  text-align: center;
+  color: var(--cyan);
+}
+.viz-stacked-rule {
+  align-self: stretch;
+  border-top: 3px solid var(--text);
+  margin: 4px 0;
+}
+.viz-stacked-result {
+  color: var(--green);
+}
+.viz-stacked-unknown {
+  color: var(--text-dim);
+}
+
+/* ten frames */
+.viz-tenframes {
+  gap: 10px;
+}
+.viz-tenframe {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3px;
+  padding: 4px;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.viz-cell {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+}
+.viz-cell-a {
+  background: var(--cyan);
+  border-color: var(--cyan);
+}
+.viz-cell-b {
+  background: var(--amber);
+  border-color: var(--amber);
+}
+.viz-cell-empty {
+  background: transparent;
+}
+
+/* dot array */
+.viz-array {
+  display: grid;
+  gap: 6px;
+}
+.viz-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--cyan);
+}
+
+/* bar model */
+.viz-barmodel {
+  width: 100%;
+  max-width: 340px;
+  gap: 6px;
+}
+.viz-bar {
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-raised);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+.viz-bar-whole {
+  width: 100%;
+  border-color: var(--amber);
+  background: var(--amber-dim);
+}
+.viz-bar-row {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+.viz-bar-part {
+  border-color: var(--cyan);
+  min-width: 44px;
+  flex-shrink: 0;
+}
+.viz-unknown {
+  color: var(--text-dim);
+}
+
+/* place value columns */
+.viz-pv {
+  display: flex;
+  gap: 8px;
+}
+.viz-pv-col {
+  min-width: 74px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 6px;
+  text-align: center;
+  background: var(--bg);
+}
+.viz-pv-col.highlight {
+  border-color: var(--amber);
+  background: var(--amber-dim);
+}
+.viz-pv-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+.viz-pv-digit {
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.viz-pv-worth {
+  font-size: 13px;
+  color: var(--cyan);
+  font-variant-numeric: tabular-nums;
+}
+
+/* equal groups */
+.viz-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+.viz-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-width: 78px;
+  padding: 9px;
+  border: 2px dashed var(--line);
+  border-radius: 50%;
+  justify-content: center;
+}
+
+/* ---------------------------------------------------------------- hints */
+.hint {
+  background: var(--bg-card);
+  border-left: 3px solid var(--cyan);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  font-size: 17px;
+  line-height: 1.45;
+}
+.hint.ai {
+  border-left-color: var(--violet);
+}
+.hint-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* -------------------------------------------------------------- feedback */
+.feedback {
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.feedback.correct {
+  background: var(--green-dim);
+  border: 1px solid var(--green);
+}
+.feedback.wrong {
+  background: var(--red-dim);
+  border: 1px solid var(--red);
+}
+.feedback-title {
+  font-size: 21px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+/* -------------------------------------------------------------- progress */
+.bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: var(--amber);
+  transition: width 0.4s ease;
+}
+.bar-fill.cyan {
+  background: var(--cyan);
+}
+.bar-fill.green {
+  background: var(--green);
+}
+
+.session-progress {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+.tick {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--line);
+}
+.tick.done {
+  background: var(--green);
+}
+.tick.miss {
+  background: var(--red);
+}
+.tick.stretch {
+  background: var(--cyan);
+  opacity: 0.65;
+}
+.tick.current {
+  background: var(--amber);
+}
+/* Retry items read as a continuation of the miss before them, not a new item. */
+.tick-retry {
+  opacity: 0.55;
+  flex: 0 0 10px;
+}
+
+.combo-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--amber);
+  white-space: nowrap;
+  animation: pop 0.3s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.rival-pill {
+  gap: 8px;
+  font-size: 14px;
+}
+
+/* ------------------------------------------------------------------ avatar */
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+.avatar-choice {
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: var(--bg-card);
+  border: 2px solid var(--line);
+  font-size: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.avatar-choice.selected {
+  border-color: var(--amber);
+  background: var(--amber-dim);
+}
+.avatar-choice:active {
+  transform: scale(0.94);
+}
+
+/* ------------------------------------------------------------- collection */
+.dino-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+.dino {
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--bg-raised);
+  padding: 14px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.dino.locked {
+  opacity: 0.55;
+}
+.dino.hatched {
+  border-color: var(--amber-dim);
+}
+.dino-glyph {
+  font-size: 44px;
+  line-height: 1.1;
+  filter: none;
+}
+.dino.locked .dino-glyph {
+  filter: grayscale(1) brightness(0.5);
+}
+.dino-name {
+  font-weight: 700;
+  font-size: 15px;
+  margin-top: 6px;
+}
+.dino-gate {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 6px;
+  line-height: 1.35;
+}
+
+/* ------------------------------------------------------------ celebration */
+.celebrate {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 9, 13, 0.94);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 50;
+}
+.celebrate-card {
+  max-width: 420px;
+  width: 100%;
+  background: var(--bg-raised);
+  border: 2px solid var(--amber);
+  border-radius: 22px;
+  padding: 26px;
+  text-align: center;
+  animation: pop 0.45s cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+.celebrate-glyph {
+  font-size: 90px;
+  animation: bob 2.2s ease-in-out infinite;
+}
+@keyframes pop {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+}
+@keyframes bob {
+  50% {
+    transform: translateY(-9px);
+  }
+}
+
+/* ---------------------------------------------------------------- parent */
+.mastery-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+.mastery-row:last-child {
+  border-bottom: none;
+}
+.mastery-name {
+  flex: 1;
+  font-size: 16px;
+}
+.badge {
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.badge.mastered {
+  border-color: var(--green);
+  color: var(--green);
+}
+.badge.proficient {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.badge.locked {
+  opacity: 0.5;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.tab {
+  flex: 1;
+  min-height: 46px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--bg-card);
+  font-size: 15px;
+  font-weight: 600;
+}
+.tab.active {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: #1a1205;
+}
+
+.spacer {
+  flex: 1;
+}
+
+input[type='text'] {
+  width: 100%;
+  min-height: var(--tap);
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--bg-card);
+  color: var(--text);
+  padding: 0 18px;
+  font: inherit;
+  font-size: 20px;
+}
+
+/* ===================================================================
+   Fractions, clocks, coins, polygons, rulers
+   =================================================================== */
+
+.viz-fraction-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.viz-frac-vs {
+  color: var(--text-dim);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.viz-fracbar {
+  display: flex;
+  border: 2px solid var(--text-dim);
+  border-radius: 6px;
+  overflow: hidden;
+  min-width: 150px;
+  height: 40px;
+}
+
+.viz-frac-part {
+  flex: 1;
+  border-right: 2px solid var(--text-dim);
+  background: transparent;
+}
+
+.viz-frac-part:last-child {
+  border-right: none;
+}
+
+.viz-frac-part.filled {
+  background: var(--cyan);
+}
+
+.viz-pie {
+  width: 92px;
+  height: 92px;
+}
+
+.viz-frac-wedge {
+  fill: transparent;
+  stroke: var(--text-dim);
+  stroke-width: 1.5;
+}
+
+.viz-frac-wedge.filled {
+  fill: var(--cyan);
+}
+
+/* ---------------------------------------------------------- clock */
+
+.viz-clock {
+  width: 150px;
+  height: 150px;
+}
+
+.viz-clock-face {
+  fill: var(--bg-raised);
+  stroke: var(--text-dim);
+  stroke-width: 2;
+}
+
+.viz-clock-tick {
+  stroke: var(--text-dim);
+  stroke-width: 1;
+}
+
+.viz-clock-tick.major {
+  stroke: var(--text);
+  stroke-width: 2;
+}
+
+.viz-clock-hand {
+  stroke-linecap: round;
+}
+
+.viz-clock-hand.hour {
+  stroke: var(--amber);
+  stroke-width: 5;
+}
+
+.viz-clock-hand.minute {
+  stroke: var(--cyan);
+  stroke-width: 3;
+}
+
+.viz-clock-pin {
+  fill: var(--text);
+}
+
+/* ---------------------------------------------------------- coins */
+
+.viz-coins {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.viz-coin {
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+  border: 2px solid rgba(0, 0, 0, 0.35);
+  flex: none;
+}
+
+.viz-coin.silver {
+  background: linear-gradient(145deg, #d8dee6, #a4b0bd);
+}
+
+.viz-coin.copper {
+  background: linear-gradient(145deg, #d99a6c, #b0703f);
+}
+
+/* -------------------------------------------------------- polygon */
+
+.viz-shape {
+  width: 140px;
+  height: 140px;
+}
+
+.viz-poly {
+  fill: rgba(57, 197, 207, 0.16);
+  stroke: var(--cyan);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.viz-poly-symmetry {
+  stroke: var(--violet);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+/* ---------------------------------------------------------- ruler */
+
+.viz-ruler-bar {
+  fill: var(--cyan);
+}
+
+.viz-ruler-bar.alt {
+  fill: var(--violet);
+}
+
+/* ===================================================================
+   Column entry and number-line input
+   =================================================================== */
+
+.colpad-boxes {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.colpad-box {
+  width: 68px;
+  height: 78px;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  background: var(--bg-raised);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.colpad-box.filled {
+  border-style: solid;
+  border-color: var(--cyan);
+}
+
+.colpad-box.active {
+  border-color: var(--amber);
+  border-style: solid;
+  box-shadow: 0 0 0 3px rgba(240, 180, 41, 0.18);
+}
+
+.colpad-box-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+.colpad-box-digit {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  min-height: 34px;
+}
+
+.colpad-prompt {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.nlpad-track {
+  position: relative;
+  height: 76px;
+  margin: 10px 14px 16px;
+}
+
+.nlpad-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 34px;
+  height: 2px;
+  background: var(--text-dim);
+}
+
+.nlpad-tick {
+  position: absolute;
+  top: 22px;
+  transform: translateX(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--bg-raised);
+  padding: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.nlpad-tick.labelled {
+  border-color: var(--text-dim);
+}
+
+.nlpad-tick.picked {
+  background: var(--cyan);
+  border-color: var(--cyan);
+}
+
+.nlpad-tick-label {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.nlpad-marker {
+  position: absolute;
+  top: -2px;
+  transform: translateX(-50%);
+  color: var(--amber);
+  font-size: 20px;
+  transition: left 0.12s ease-out;
+  pointer-events: none;
+}
+
+/* ===================================================================
+   Weekly expedition
+   =================================================================== */
+
+.expedition-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+.expedition-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.expedition-glyph {
+  font-size: 26px;
+}
+
+.expedition-name {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.expedition-week {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+.expedition-blurb {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.expedition-goals {
+  display: flex;
+  gap: 10px;
+}
+
+.expedition-goal {
+  flex: 1;
+  background: var(--bg-raised);
+  border-radius: 10px;
+  padding: 9px 11px;
+}
+
+.expedition-goal-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.expedition-goal-value {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.expedition-goal.met .expedition-goal-value {
+  color: var(--green);
+}
+
+.expedition-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg-raised);
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.expedition-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), var(--violet));
+  transition: width 0.4s ease-out;
+}
+
+.expedition-done {
+  margin-top: 10px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--green-dim);
+  color: var(--green);
+  font-weight: 600;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Restore-from-backup notice in the parent screen. */
+.backup-notice {
+  border: 1px solid var(--amber-dim);
+  background: rgba(240, 180, 41, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Mission choice and the non-currency discovery shelf. */
+.mission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mission-choice {
+  min-height: 150px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg-card);
+  padding: 14px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.mission-choice:active {
+  border-color: var(--amber);
+  transform: scale(0.98);
+}
+
+.mission-choice span {
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.mission-choice small {
+  color: var(--cyan);
+  font-size: 12px;
+  margin-top: auto;
+}
+
+.discovery-row {
+  display: flex;
+  gap: 10px;
+}
+
+.discovery-chip {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.discovery-chip span {
+  display: block;
+  font-size: 26px;
+}
+
+.discovery-chip small {
+  display: block;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+@media (max-width: 480px) {
+  .mission-grid {
+    grid-template-columns: 1fr;
+  }
+  .mission-choice {
+    min-height: 122px;
+  }
+}
