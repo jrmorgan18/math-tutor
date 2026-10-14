@@ -185,6 +185,12 @@ export function Home() {
         <button className="btn btn-primary btn-wide" disabled={!hasPlayAccess(profile, day)} onClick={() => setScreen('paddock')}>Enter the Paddock</button>
       </section>
 
+      <section className="card dna-entry" aria-label="DNA Playground">
+        <div className="row between"><h2>🧬 DNA Playground</h2><span className="pill">{hasPlayAccess(profile, day) ? 'Open today' : 'Locked today'}</span></div>
+        <p className="small dim">{hasPlayAccess(profile, day) ? 'Your bench is ready. Change a trait, test a dinosaur, save your invention.' : 'Finish today’s expedition to open your experiment bench.'}</p>
+        <button className="btn btn-primary btn-wide" disabled={!hasPlayAccess(profile, day)} onClick={() => setScreen('dna-lab')}>Enter DNA Playground</button>
+      </section>
+
       {/* -------------------------------------------------- field notes */}
       {factDino ? (
         <div className="card">

@@ -447,4 +447,9 @@ real touch drag/cancel, tap placement, keyboard interaction, reduced motion,
 photo capture/title/view/deletion, reload, exports and daily relocking.
 Screenshots are saved in ignored `.qa/` (or `GENESIS_QA_OUTPUT`).
 Physical iPad/Safari verification remains a device check. Publishing uses the
-existing GitHub Pages workflow on main. DNA Lab is a separate future playground.
+existing GitHub Pages workflow on main. DNA Playground is documented below.
+
+
+## DNA Playground
+
+A daily-access scientist bench with earned samples, fictional trait editing, deterministic Dino Dash and Balance Lab, per-profile creation notebooks and portable JSON export. Finish today’s session to enter; play uses no math DNA. See [the feature and export contract](docs/DNA_PLAYGROUND.md), [JSON Schema](docs/dinosaur-export.schema.json) and [synthetic example](docs/dinosaur-export.example.json). No battle import is implemented.

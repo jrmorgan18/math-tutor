@@ -1,3 +1,4 @@
+import type { Setup } from '../../play/dnaLab';
 import { dinoById } from '../../content/dinosaurs';
 import type { ToyKind } from '../../play/paddock';
 
@@ -33,20 +34,25 @@ export function Landscape() {
     {[30, 180, 330, 480, 630, 780, 930].map(x => <path key={x} d={`M${x} 558 V600`} stroke="#b5a684" strokeWidth="12"/>)}
   </>;
 }
-export function DinosaurArt({ id, happy = false }: { id: string; happy?: boolean }) {
-  const color = dinoById(id)?.color ?? '#73ae71';
+export function DinosaurArt({ id, happy = false, setup }: { id: string; happy?: boolean; setup?: Setup }) {
+  const color = setup && setup.appearance.color !== 'sample' ? ({ mint: '#69d6b1', coral: '#f28b78', violet: '#b5a0f5' })[setup.appearance.color] : dinoById(id)?.color ?? '#73ae71';
+  const tail = setup?.traits.tail ?? 1, legs = setup?.traits.legs ?? 1, mass = Math.sqrt(setup?.traits.mass ?? 1);
+  const pattern = setup?.appearance.pattern ?? 'plain';
   const flyer = id === 'pteranodon';
   const longNeck = ['brachiosaurus', 'parasaurolophus'].includes(id);
   return <g className={happy ? 'dinosaur-art happy' : 'dinosaur-art'}>
     <ellipse cy="33" rx="45" ry="10" fill="#244330" opacity=".2"/>
     {flyer ? <>
       <path d="M-4 0 Q-30 -45 -65 -25 L-37 13 L-6 9 M4 0 Q30 -45 65 -25 L37 13 L6 9" fill={color} stroke="#304750" strokeWidth="3"/>
-      <ellipse cy="1" rx="15" ry="24" fill={color}/><path d="M0 -21 L-18 -47 L13 -29 L35 -18 L8 -12Z" fill={color}/><path d="M12 -26 L44 -18 L12 -16" fill="#e4b573"/><circle cx="5" cy="-24" r="3" fill="#172b32"/>
+      <ellipse cy="1" rx={15 * mass} ry={24 * mass} fill={color}/>{setup && <path d={`M-5 19 l-4 ${10 * legs} M5 19 l4 ${10 * legs} M0 15 L${-30 * tail} 23`} stroke={color} strokeWidth="5"/>}
+      {pattern !== 'plain' && <path d="M-9 -10 h18 M-9 2 h18" stroke="#253b53" strokeWidth={pattern === 'spots' ? 6 : 3} strokeDasharray={pattern === 'spots' ? '2 6' : undefined} opacity=".4"/>}<path d="M0 -21 L-18 -47 L13 -29 L35 -18 L8 -12Z" fill={color}/><path d="M12 -26 L44 -18 L12 -16" fill="#e4b573"/><circle cx="5" cy="-24" r="3" fill="#172b32"/>
     </> : <>
-      <path d={id === 'ankylosaurus' ? 'M-30 5 Q-65 -5 -73 10' : 'M-30 5 Q-67 4 -74 -22 Q-59 -9 -25 -13'} fill={color} stroke={color} strokeWidth="10" strokeLinecap="round"/>
+      <g transform={`translate(-25 0) scale(${tail} 1) translate(25 0)`}><path d={id === 'ankylosaurus' ? 'M-30 5 Q-65 -5 -73 10' : 'M-30 5 Q-67 4 -74 -22 Q-59 -9 -25 -13'} fill={color} stroke={color} strokeWidth="10" strokeLinecap="round"/>
       {id === 'ankylosaurus' && <ellipse cx="-72" cy="9" rx="12" ry="9" fill="#616d80"/>}
-      <path d="M-21 15 L-25 32 L-10 32 L-5 15 M13 15 L16 32 L31 32 L29 10" fill={color} stroke="#304750" strokeWidth="2"/>
-      <ellipse cx="0" cy="0" rx="40" ry="24" fill={color} stroke="#304750" strokeWidth="3"/>
+      </g><g transform={`translate(0 12) scale(1 ${legs}) translate(0 -12)`}><path d="M-21 15 L-25 32 L-10 32 L-5 15 M13 15 L16 32 L31 32 L29 10" fill={color} stroke="#304750" strokeWidth="2"/>
+      </g><ellipse cx="0" cy="0" rx={40 * mass} ry={24 * mass} fill={color} stroke="#304750" strokeWidth="3"/>
+      {pattern === 'spots' && [-20,0,20].map(x => <circle key={x} cx={x * mass} cy="-5" r="6" fill="#253b53" opacity=".4"/>)}
+      {pattern === 'stripes' && [-20,0,20].map(x => <path key={x} d={`M${x * mass} -15 l-5 22`} stroke="#253b53" strokeWidth="6" opacity=".4"/>)}
       {['stegosaurus','spinosaurus'].includes(id) && [-28,-10,8,25].map(x => <path key={x} d={`M${x-9} -17 L${x} -44 L${x+9} -20Z`} fill={id === 'stegosaurus' ? '#e6be72' : '#d78a56'} stroke="#65553f" strokeWidth="2"/>)}
       {id === 'ankylosaurus' && [-23,-5,13].map(x => <path key={x} d={`M${x-8} -12 L${x} -27 L${x+8} -12`} fill="#b9c1b0"/>)}
       {id === 'triceratops' && <ellipse cx="28" cy="-12" rx="21" ry="29" fill="#b95f44" stroke="#663d33" strokeWidth="2"/>}

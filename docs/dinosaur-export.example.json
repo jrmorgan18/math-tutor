@@ -1,0 +1,47 @@
+{
+  "schema": "genesis-lab/dinosaur",
+  "version": 1,
+  "fictionalLabCreation": true,
+  "creation": {
+    "id": "synthetic-mint-runner",
+    "name": "Mint runner",
+    "speciesId": "compsognathus",
+    "traits": {
+      "tail": 1,
+      "legs": 1,
+      "mass": 0.8
+    },
+    "appearance": {
+      "color": "mint",
+      "pattern": "spots"
+    },
+    "modelVersion": "genesis-toy-1",
+    "runs": [
+      {
+        "speciesId": "compsognathus",
+        "traits": {
+          "tail": 1,
+          "legs": 1,
+          "mass": 0.8
+        },
+        "appearance": {
+          "color": "mint",
+          "pattern": "spots"
+        },
+        "conditions": {
+          "experiment": "dash",
+          "track": "smooth",
+          "turn": "gentle"
+        },
+        "seed": 2718,
+        "modelVersion": "genesis-toy-1",
+        "result": {
+          "seconds": 6.6,
+          "cleared": 0,
+          "stability": "stable",
+          "explanation": "Longer legs speed up the run; extra mass and tail length slow it down."
+        }
+      }
+    ]
+  }
+}

@@ -1,3 +1,4 @@
+import { emptyLab, migrateLab, type LabState } from '../play/dnaLab';
 import { del, get, set, setMany } from 'idb-keyval';
 import { propagateUnlocks, reconcileSkillStates } from '../engine/mastery';
 import { verifyLegacyEvidence } from '../engine/evidence';
@@ -67,6 +68,7 @@ export interface Profile {
   readAloud: boolean;
   /** Local habitat and bounded scrapbook; included in safety backups and exports. */
   paddock: PaddockState;
+  dnaLab: LabState;
 }
 
 /**
@@ -106,7 +108,7 @@ const BACKUP_KEY = 'genesis-lab:backup';
 const ACTIVE_SESSION_KEY = 'genesis-lab:active-session';
 const ACTIVE_PLACEMENT_KEY = 'genesis-lab:active-placement';
 
-export const PROFILE_VERSION = 5;
+export const PROFILE_VERSION = 6;
 
 export function todayKey(now = new Date()): string {
   const y = now.getFullYear();
@@ -148,6 +150,7 @@ export function newProfile(
     soundOn: true,
     readAloud: true,
     paddock: emptyPaddock(),
+    dnaLab: emptyLab(),
   };
 }
 
@@ -213,6 +216,7 @@ export function migrateProfile(raw: unknown, attempts?: Attempt[]): Profile | nu
     soundOn: p.soundOn !== false,
     readAloud: p.readAloud !== false,
     paddock: migratePaddock(p.paddock),
+    dnaLab: migrateLab(p.dnaLab),
   };
 }
 

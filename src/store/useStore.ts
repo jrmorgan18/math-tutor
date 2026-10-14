@@ -1,3 +1,4 @@
+import type { LabState } from '../play/dnaLab';
 import { conceptProficient } from '../engine/evidence';
 import type { PaddockState } from '../play/paddock';
 import { create } from 'zustand';
@@ -112,6 +113,7 @@ export type Screen =
   | 'session'
   | 'recap'
   | 'paddock'
+  | 'dna-lab'
   | 'collection'
   | 'parent';
 
@@ -191,6 +193,7 @@ interface Store {
   /** Whether a restorable snapshot exists, for showing the undo affordance. */
   backupInfo: () => Promise<{ at: number; reason: string; name: string } | null>;
   setScreen: (screen: Screen) => void;
+  saveLab: (lab: LabState) => Promise<void>;
   savePaddock: (paddock: PaddockState) => Promise<void>;
   toggleSound: () => void;
   toggleReadAloud: () => void;
@@ -297,6 +300,16 @@ export const useStore = create<Store>((set, get) => ({
 
   setScreen(screen) {
     set({ screen });
+  },
+
+  async saveLab(dnaLab) {
+    const { profile } = get();
+    if (!profile) throw new Error('Open a profile first.');
+    const next = { ...profile, dnaLab };
+    // Commit to disk first: a quota failure leaves the saved notebook untouched.
+    await saveProfile(next);
+    const current = get().profile;
+    if (current?.createdAt === profile.createdAt && current.name === profile.name) set({ profile: { ...current, dnaLab } });
   },
 
   async savePaddock(paddock) {

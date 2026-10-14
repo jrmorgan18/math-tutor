@@ -6,6 +6,7 @@ import { Home } from './ui/screens/Home';
 import { Briefing } from './ui/screens/Briefing';
 import { Session } from './ui/screens/Session';
 import { Recap } from './ui/screens/Recap';
+import { DnaLab } from './ui/screens/DnaLab';
 import { Paddock } from './ui/screens/Paddock';
 import { Collection } from './ui/screens/Collection';
 import { Parent } from './ui/screens/Parent';
@@ -42,6 +43,7 @@ export function App() {
       {screen === 'briefing' ? <Briefing /> : null}
       {screen === 'session' ? <Session /> : null}
       {screen === 'recap' ? <Recap /> : null}
+      {screen === 'dna-lab' ? <DnaLab /> : null}
       {screen === 'paddock' ? <Paddock /> : null}
       {screen === 'collection' ? <Collection /> : null}
       {screen === 'parent' ? <Parent /> : null}
