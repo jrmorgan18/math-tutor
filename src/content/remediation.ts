@@ -160,7 +160,7 @@ const REMEDIATION: Record<OpKey, Partial<Record<ErrorType, string>>> = {
     'place-value': 'The digits are close, but check which column each one belongs in.',
     'operation-reversed': "This one needed adding, not subtracting — the two amounts are being put together.",
     'near-miss': 'You had the right idea — just a small slip in the arithmetic.',
-    transposition: 'You had the right digits, just in the wrong order. Slow down on the write-down.',
+    transposition: 'Those digits are reversed. Check the ones and tens boxes, then correct the entry.',
   },
   '-': {
     'off-by-one': 'Just one off — try counting back again, one step at a time.',
@@ -170,7 +170,7 @@ const REMEDIATION: Record<OpKey, Partial<Record<ErrorType, string>>> = {
     'place-value': 'The digits are close, but check which column each one is in.',
     'operation-reversed': 'This one needed subtracting, not adding — something is being taken away or compared.',
     'near-miss': 'Right idea, small slip in the numbers.',
-    transposition: 'Right digits, wrong order. Slow down when you write the answer.',
+    transposition: 'Those digits are reversed. Check which box takes ones first.',
   },
   '×': {
     'operation-reversed': "This one needed multiplying, not adding — there are equal groups here, so count them as groups.",

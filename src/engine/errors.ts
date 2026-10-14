@@ -131,11 +131,11 @@ export const ERROR_COACHING: Record<ErrorType, string> = {
   'operation-reversed':
     'He read the problem and picked the wrong operation. Ask him to say out loud whether the answer should be bigger or smaller before he starts.',
   transposition:
-    'He knows the answer but writes the digits in the wrong order. Often just speed — slowing down fixes it.',
+    'The digits were reversed. Check entry direction and allow correction before interpreting this as a learning difficulty.',
   'near-miss': 'The method is right, the arithmetic slipped. Not a concept gap.',
   'likely-guess':
     'Answered faster than the problem can be read. Usually means he is disengaged or the question feels too hard to attempt.',
   timeout:
-    'Sat with it and could not start. That is a signal the skill is above his current level, not that he was distracted.',
+    'Skipped after support. Ask about interruptions and understanding before drawing a conclusion.',
   other: '',
 };

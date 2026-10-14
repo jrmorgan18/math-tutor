@@ -1,3 +1,4 @@
+import { conceptProficient } from '../engine/evidence';
 import { create } from 'zustand';
 import { generate } from '../engine/generators';
 import { generateBossProblem } from '../engine/generators/boss';
@@ -118,6 +119,9 @@ export interface SessionRun {
   problem: Problem | null;
   itemStartedAt: number;
   hintsUsed: number;
+  automaticHints?: number;
+  requestedHints?: number;
+  timingInterrupted?: boolean;
   phase: 'answering' | 'feedback';
   lastResult: {
     correct: boolean;
@@ -194,7 +198,7 @@ interface Store {
   answerPlacement: (given: string) => void;
 
   beginSession: () => void;
-  submitAnswer: (given: string, timedOut?: boolean) => Promise<void>;
+  submitAnswer: (given: string, timedOut?: boolean, timing?: { latencyMs: number; timingReliable: boolean; chosenOperation?: string }) => Promise<void>;
   useHint: () => void;
   revealHintsTo: (rung: number) => void;
   recordSelfDiagnosis: (bucket: Attempt['selfDiagnosis']) => void;
@@ -228,7 +232,8 @@ export const useStore = create<Store>((set, get) => ({
       set({ screen: 'welcome', profile: null, attempts: [] });
       return;
     }
-    const resumeSession = profile.placementDone ? activeSession : null;
+    const resumeSession = profile.placementDone && activeSession
+      ? { ...activeSession, itemStartedAt: Date.now(), timingInterrupted: true } : null;
     const resumePlacement = !profile.placementDone ? activePlacement : null;
     set({
       profile,
@@ -395,6 +400,8 @@ export const useStore = create<Store>((set, get) => ({
         problem: generateForSession(first, profile.hatched),
         itemStartedAt: Date.now(),
         hintsUsed: 0,
+        automaticHints: 0,
+        requestedHints: 0,
         phase: 'answering',
         lastResult: null,
         pending: [],
@@ -415,7 +422,7 @@ export const useStore = create<Store>((set, get) => ({
     void saveLearningCheckpoint(profile, get().attempts, session);
   },
 
-  async submitAnswer(given, timedOut = false) {
+  async submitAnswer(given, timedOut = false, timing) {
     const state = get();
     const s = state.session;
     const profile = state.profile;
@@ -424,7 +431,7 @@ export const useStore = create<Store>((set, get) => ({
     const item = s.plan[s.index];
     if (!item) return;
 
-    const latencyMs = Date.now() - s.itemStartedAt;
+    const latencyMs = timing?.latencyMs ?? Date.now() - s.itemStartedAt;
     const correct = !timedOut && normalise(given) === normalise(s.problem.answer);
     const errorType = classify(s.problem, given, latencyMs, timedOut);
 
@@ -439,6 +446,10 @@ export const useStore = create<Store>((set, get) => ({
       errorType,
       latencyMs,
       hintsUsed: s.hintsUsed,
+      automaticHints: s.automaticHints,
+      requestedHints: s.requestedHints,
+      timingReliable: !s.timingInterrupted && (timing?.timingReliable ?? false),
+      chosenOperation: timing?.chosenOperation,
       slot: item.slot,
       at: Date.now(),
       retry: item.retry,
@@ -502,6 +513,8 @@ export const useStore = create<Store>((set, get) => ({
     if (
       !correct &&
       !item.retry &&
+      !item.remediationStage &&
+      s.plan.filter(p => p.retry).length < 3 && s.plan.length < 21 &&
       (item.slot === 'working' || item.slot === 'new') &&
       errorType !== 'likely-guess'
     ) {
@@ -510,7 +523,7 @@ export const useStore = create<Store>((set, get) => ({
         .slice(-6)
         .filter((error) => error === errorType).length ?? 0;
       const stages = repeats >= 2
-        ? (['concrete', 'faded', 'transfer'] as const)
+        ? (['concrete'] as const)
         : (['transfer'] as const);
       const retryItems: PlannedItem[] = stages.map((remediationStage) =>
         retargetPlannedItem({
@@ -588,7 +601,8 @@ export const useStore = create<Store>((set, get) => ({
     // Never jump straight to the worked solution — the ladder is walked one
     // rung at a time.
     const max = s.problem.hints.length;
-    const session = { ...s, hintsUsed: Math.min(max, s.hintsUsed + 1) };
+    const session = { ...s, hintsUsed: Math.min(max, s.hintsUsed + 1),
+      requestedHints: (s.requestedHints ?? 0) + Number(s.hintsUsed < max) };
     set({ session });
     const { profile, attempts } = get();
     if (profile) void saveLearningCheckpoint(profile, attempts, session);
@@ -607,6 +621,7 @@ export const useStore = create<Store>((set, get) => ({
     const session = {
       ...s,
       hintsUsed: Math.max(s.hintsUsed, Math.min(rung, ceiling)),
+      automaticHints: (s.automaticHints ?? 0) + Math.max(0, Math.min(rung, ceiling) - s.hintsUsed),
     };
     set({ session });
     const { profile, attempts } = get();
@@ -660,6 +675,9 @@ export const useStore = create<Store>((set, get) => ({
         problem: generateForSession(item, profile?.hatched ?? []),
         itemStartedAt: Date.now(),
         hintsUsed: 0,
+        automaticHints: 0,
+        requestedHints: 0,
+        timingInterrupted: false,
         phase: 'answering',
         lastResult: null,
       };
@@ -685,7 +703,7 @@ export const useStore = create<Store>((set, get) => ({
     // Enforce the skill gate here too, not just in the UI — this is the rule
     // the whole reward design rests on, so it is checked at the boundary.
     const dino = dinoById(dinoId);
-    if (!dino || !isGateOpen(dino, profile.hatched, (id) => profile.skillStates[id]?.proficient === true)) {
+    if (!dino || !isGateOpen(dino, profile.hatched, (id) => conceptProficient(profile.skillStates[id]))) {
       return;
     }
     const next: Profile = {
@@ -701,7 +719,7 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   isProficient(skillId) {
-    return get().profile?.skillStates[skillId]?.proficient === true;
+    return conceptProficient(get().profile?.skillStates[skillId]);
   },
 }));
 
@@ -740,7 +758,7 @@ export function applyDna(
     if (!seq) {
       const target = nextTarget(
         next.hatched,
-        (id) => next.skillStates[id]?.proficient === true,
+        (id) => conceptProficient(next.skillStates[id]),
       );
       // Nothing unlocked to work toward: the fragments stay banked in `dna`
       // until a skill gate opens.

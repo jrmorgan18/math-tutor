@@ -1,3 +1,4 @@
+import { conceptProficient } from '../../engine/evidence';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { SKILLS, STRAND_NAMES, getSkill } from '../../engine/skills';
@@ -62,6 +63,9 @@ export function Parent() {
         scored.length > 0
           ? Math.round((scored.filter((a) => a.hintsUsed > 0).length / scored.length) * 100)
           : 0,
+      automaticSupport: scored.filter(a => (a.automaticHints ?? 0) > 0).length,
+      requestedSupport: scored.filter(a => (a.requestedHints ?? 0) > 0).length,
+      legacySupport: scored.filter(a => a.hintsUsed > 0 && a.automaticHints === undefined && a.requestedHints === undefined).length,
       stretchAttempted: stretch.length,
       stretchWins,
     };
@@ -144,6 +148,8 @@ export function Parent() {
           </div>
 
           <div className="card">
+            <h3>Support and independent work</h3>
+            <p className="small dim">Automatically shown support: {stats.automaticSupport} questions · Learner-requested hints: {stats.requestedSupport} questions · Older support with unknown origin: {stats.legacySupport} questions.</p>
             <h3>Reaching for hard things</h3>
             <p className="small dim" style={{ margin: 0 }}>
               He has attempted <strong>{stats.stretchAttempted}</strong> stretch
@@ -167,6 +173,10 @@ export function Parent() {
                     <div className="mastery-row" key={skill.id}>
                       <div className="mastery-name">
                         {skill.name}
+                        <div className="small dim">Demonstrated level {state.demonstratedLevel ?? 0} / {skill.maxLevel}
+                          {state.legacyLevel && state.legacyLevel > (state.demonstratedLevel ?? 0) ? ` · Earlier level ${state.legacyLevel} awaiting verification` : ''}
+                          {skill.fluency ? ` · Fluency: ${state.fluent ? 'goal reached' : 'separate practice goal'}` : ''}
+                        </div>
                         {state.attempts > 0 ? (
                           <div className="small dim">
                             Independent {Math.round((state.independentAccuracy ?? 0) * 100)}%
@@ -181,7 +191,7 @@ export function Parent() {
                         <div className="bar" style={{ marginTop: 5 }}>
                           <div
                             className={
-                              state.mastered ? 'bar-fill green' : 'bar-fill'
+                              (state.mastered && conceptProficient(state)) ? 'bar-fill green' : 'bar-fill'
                             }
                             style={{ width: `${state.unlocked ? pct : 0}%` }}
                           />
@@ -189,18 +199,18 @@ export function Parent() {
                       </div>
                       <span
                         className={
-                          state.mastered
+                          (state.mastered && conceptProficient(state))
                             ? 'badge mastered'
-                            : state.proficient
+                            : conceptProficient(state)
                               ? 'badge proficient'
                               : state.unlocked
                                 ? 'badge'
                                 : 'badge locked'
                         }
                       >
-                        {state.mastered
+                        {(state.mastered && conceptProficient(state))
                           ? 'Mastered'
-                          : state.proficient
+                          : conceptProficient(state)
                             ? 'Proficient'
                             : state.unlocked
                               ? `Level ${state.level}`
@@ -214,7 +224,7 @@ export function Parent() {
           })}
 
           <p className="small dim" style={{ paddingBottom: 20 }}>
-            <strong>Proficient</strong> means accuracy and speed are there, and it
+            <strong>Proficient</strong> means accurate independent work at the highest difficulty, and it
             unlocks the next skill. <strong>Mastered</strong> additionally means
             he still had it two spaced reviews later — that is the honest signal
             that it stuck.
@@ -252,9 +262,7 @@ export function Parent() {
           <div className="card">
             <h3>Hint usage</h3>
             <p className="small dim" style={{ margin: 0 }}>
-              He asks for a hint on {stats.hintRate}% of questions. Somewhere
-              around 10–25% is healthy. Near zero usually means he would rather
-              guess than ask; very high means the working level is set too hard.
+              Support was used on {stats.hintRate}% of questions. Automatically shown support and requested hints are reported separately above. Older attempts do not identify who initiated support; hint use alone does not establish a learning difficulty.
             </p>
           </div>
         </>
@@ -427,6 +435,7 @@ function WeeklyTab({
 
       <div className="card">
         <h3>Written note</h3>
+        <p className="small dim">Support this week: {digest.automaticSupportCount} automatic · {digest.requestedSupportCount} learner-requested · {digest.legacySupportCount} older, origin unknown.</p>
         <p className="small dim" style={{ margin: 0 }}>
           This report is generated on this device from recorded sessions. It never sends play or progress data to a service.
         </p>
@@ -439,7 +448,7 @@ function WeeklyTab({
             <div>
               <div style={{ fontSize: 15 }}>{s.name}</div>
               <div className="small dim">
-                {s.attempts} questions · tier {s.level}
+                {s.attempts} questions · demonstrated tier {s.level}
                 {s.proficient ? ' · proficient' : ''}
               </div>
             </div>

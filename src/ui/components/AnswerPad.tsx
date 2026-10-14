@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { sfx } from '../audio';
 import type { Representation } from '../../engine/types';
 
@@ -9,9 +10,7 @@ import type { Representation } from '../../engine/types';
  * the digits in a layout built for adults typing prose. Choice answers get
  * full-width tap targets.
  *
- * Single-digit answers auto-submit, which removes a whole tap from the most
- * common interaction in the app — worth a surprising amount over a 25-question
- * session.
+ * Numeric entries are explicitly confirmed so accidental taps can be corrected.
  */
 
 interface Props {
@@ -51,6 +50,7 @@ export function AnswerPad({
   onReplace,
   onSubmit,
 }: Props) {
+  const [demo, setDemo] = useState(() => typeof sessionStorage !== 'undefined' && sessionStorage.getItem('column-demo-v1') !== 'seen');
   /**
    * Build mode: he taps out the quantity instead of typing a numeral.
    *
@@ -119,11 +119,17 @@ export function AnswerPad({
       if (disabled || filled >= columns) return;
       sfx.tap(soundOn);
       // Newest digit is the next column to the left, so it goes on the front.
-      onReplace(digit + value);
+      onDigit(digit);
     };
 
     return (
       <div className="colpad">
+        {demo ? <div className="hint">
+          <strong>Start on the right: ones → tens → hundreds.</strong>
+          <p>Example: to enter 42, tap 2 in ones, then 4 in tens. The boxes show 42. Use ⌫ to undo the latest column before sending.</p>
+          <button className="btn btn-ghost" onClick={() => { setDemo(false); sessionStorage.setItem('column-demo-v1', 'seen'); }}>Got it</button>
+        </div> : <details className="small"><summary>How to fill columns</summary>For 42: enter 2 in ones, then 4 in tens. Use ⌫ to correct.</details>}
+        <div className="colpad-prompt">← Fill from the right · ones first</div>
         <div className="colpad-boxes">
           {Array.from({ length: columns }, (_, i) => {
             // Render left to right, but index from the right.
@@ -133,6 +139,7 @@ export function AnswerPad({
             return (
               <div
                 key={i}
+                aria-current={isActive ? 'step' : undefined}
                 className={`colpad-box${d !== undefined ? ' filled' : ''}${isActive ? ' active' : ''}`}
               >
                 <span className="colpad-box-label">{columnName(fromRight)}</span>
@@ -163,7 +170,7 @@ export function AnswerPad({
             onClick={() => {
               sfx.tap(soundOn);
               // Undo the most recent column, which is the leftmost digit.
-              onReplace(value.slice(1));
+              onBackspace();
             }}
             aria-label="Undo last column"
           >
@@ -210,7 +217,7 @@ export function AnswerPad({
 
     return (
       <div className="nlpad">
-        <div className="nlpad-track">
+        <div className="nlpad-scroll"><div className="nlpad-track" style={{ width: Math.max(300, (ticks - 1) * 48) }}>
           {Array.from({ length: ticks }, (_, i) => {
             const n = from + i * step;
             const pct = ((n - from) / span) * 100;
@@ -238,6 +245,7 @@ export function AnswerPad({
               ▼
             </div>
           ) : null}
+        </div>
         </div>
         <div className="row" style={{ gap: 10 }}>
           <div className="build-count mono">{picked ?? '—'}</div>

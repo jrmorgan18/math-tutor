@@ -26,6 +26,7 @@ export function multConcept(level: number, seed: number): Problem {
     return {
       ...base,
       prompt: `${g} nests. Each nest has ${per} eggs.`,
+      questionVisual: groups(g, per),
       subPrompt: build ? 'Tap out how many eggs altogether.' : 'How many eggs altogether?',
       answer: String(answer),
       representation: build

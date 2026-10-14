@@ -1,0 +1,34 @@
+# Genesis Lab usability and progression update
+
+Prepared for the user-authorized GitHub Pages rollout after data-preservation verification. The checkout was clean before this work. Personal exports were read only, used in memory for verification, and were not copied into the repository.
+
+## Behavior changes
+
+- Earned discovery tiles are buttons with an accessible native dialog, full text, Escape/close action and restored focus. A permanent All discoveries collection includes older rewards, empty states and a fallback for unavailable discovery definitions. The daily rotating dinosaur fact is labelled separately.
+- Symmetry questions show the shape without axes. Explanations draw complete axes: rectangle 2, square 4, equilateral triangle 3, regular pentagon 5 and regular hexagon 6. Rectangles without side labels remain visibly non-square. Perimeter triangles have valid side lengths and proportional drawings. Backward number-line jumps use minus signs.
+- Proficiency uses independent accuracy and evidence at the actual question difficulty. It requires eight total attempts, six independent non-retry evidence items and at least three top-tier items with at least 85% accuracy. Easier warmups and level-1 stretch answers cannot demonstrate higher levels. Fluency is a separate parent-visible goal using six reliable top-tier latency samples; focus loss, background time, resumed items and long interruptions are excluded from that timing evidence.
+- Version 4 rebuilds legacy difficulty evidence from retained independent attempts. The complete original skill record is retained alongside an earlier level awaiting verification, and the next demonstrated tier is probed. On both reference exports, fraction-of-set demonstrates tier 1 and schedules tier 2; existing top-tier addition accuracy establishes proficiency without a speed gate.
+- Retention uses its own verification anchor. Frequent practice cannot perpetually postpone a seven-day check. Automatically supported, easier and retry work cannot pass it.
+- Remediation stages are assigned after interleaving and boss insertion, maintaining concrete → faded → independent transfer order. Outcomes persist across sessions, resolve after three independent transfer successes and reactivate on recurrence. Reversed input and timeouts are not automatically treated as recurring mathematical misconceptions. Parent progress and weekly reporting distinguish automatic, requested and unknown legacy support.
+- Numeric answers require confirmation. Column entry has a brief first-use example, explicit direction, active place-value focus and undo. Semantic edits prevent rapid taps from reading stale React props. Number-line targets are at least 44 pixels with nonoverlapping spacing and local horizontal scrolling when needed; selections still require confirmation.
+- Introductory money, time and equal-group practice no longer depend on advanced skip counting. Word stories ask for an operation before calculation. Crossing-ten and regrouping explanations are clearer; borrowing uses a decomposed tens/ones model. Fraction tier 2 explicitly practices thirds and quarters. Missing-number equations vary between an unknown added part and an unknown taken-away part. Introductory equal-group questions show the nests before asking for the total; array and repeated-addition connections remain available.
+- Sessions contain at most 18 planned items, with up to three single retries and an absolute 21-item ceiling. Retry items cannot create another retry. Supported work is mixed with independent assessment opportunities.
+
+## Preservation
+
+Migration does not replay attempts or reward allocation. Names, placement completion, earned dinosaurs, DNA, sequencing progress, discoveries and session counts remain intact. Attempts retain their recorded answers, errors and timestamps; the persistence layer no longer silently truncates history. Before a schema upgrade, the existing profile and attempt log are saved in the rolling backup. Previously opened skills remain open. Existing optional profile fields and expedition progress are retained, including zero-target goals. Legacy proficiency/retention claims and wall-clock fluency aggregates are reverified rather than presented as demonstrated competence; earned rewards remain earned.
+
+## Verification
+
+- `npm test`: 162 tests passed across 10 files.
+- `npm run build`: TypeScript and Vite production build passed.
+- `git diff --check`: passed.
+- `tests/progression.test.ts`: difficulty-specific evidence, accuracy-based reward/content unlocks, legacy assets and idempotence, reliable fluency samples, retention despite daily practice, remediation sequence across sessions, resolution/reactivation, geometry, entry edits and support reporting.
+- `tests/tablet-check.mjs`: isolated Chromium browser storage, touch enabled, 1024×768 landscape and 768×1024 portrait. Confirmed full raptor field-note access, old collection entries, focus trapping/restoration, keyboard and touch close, rapid batched column taps, undo/correction, leading-zero numeric entry, multi-digit entry, explicit submission, number-line target sizes/selections, operation choice, automatic/requested telemetry, symmetry and retry/session bounds. Both read-only reference exports passed actual IndexedDB migration checks: every non-skill profile field, full attempt log, original skill records, migration backup, active session/placement snapshots, previously unlocked skills, repeated loads, exports and subsequent checkpoints were preserved. Corrected evidence checks passed as well.
+- Inspected generated tablet screenshots for discovery details, column entry, number-line selection, rectangle symmetry and all six hexagon axes. Screenshots use a synthetic learner and are in ignored `.qa/`.
+
+To repeat browser checks, start Vite on port 5175 and run `node tests/tablet-check.mjs` with Playwright available. `GENESIS_URL` changes the server URL; `PLAYWRIGHT_PACKAGE` can point to a bundled `playwright/index.mjs`; `GENESIS_BROWSER_EXECUTABLE` or `GENESIS_BROWSER_CHANNEL` selects an installed browser. Optional `GENESIS_REFERENCE_EXPORTS` accepts semicolon-separated paths and only reads them. `GENESIS_QA_OUTPUT` changes the screenshot directory.
+
+## Limits and review decisions
+
+Tablet verification used Chromium touch emulation; physical iPad/Safari behavior has not been checked. Legacy hints do not reveal whether support was automatic or requested, so reports identify their origin as unknown. Foreground pauses cannot be measured perfectly: solves longer than 45 seconds are conservatively excluded from fluency, while their mathematical accuracy still counts. Evidence thresholds and the shorter session mix are explicit product choices suitable for review; no grade-level labels or blanket difficulty increase were introduced.

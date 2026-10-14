@@ -19,7 +19,7 @@ const STACKABLE_SKILLS = new Set(['add-100', 'sub-100']);
 export function isStackable(problem: Problem): boolean {
   return (
     STACKABLE_SKILLS.has(problem.skillId) &&
-    problem.representation.kind === 'numeric' &&
+    (problem.representation.kind === 'numeric' || problem.representation.kind === 'columns') &&
     !!problem.meta?.operands &&
     problem.meta.operands.length === 2 &&
     (problem.meta.op === '+' || problem.meta.op === '-')

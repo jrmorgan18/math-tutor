@@ -103,10 +103,10 @@ export function sub20(level: number, seed: number): Problem {
       bridges
         ? h(
             `Go back to 10 first: ${a} − ${downToTen} = 10, and there is still ${b - downToTen} to take away.`,
-            barmodel(a, [b, null]),
+            numberline(a, answer),
           )
         : h('Take the ones away and leave the ten alone.', barmodel(a, [b, null])),
-      h(`${a} − ${b} = ${answer}.`, stacked(a, b, '-', answer)),
+      h(bridges ? `${a} − ${downToTen} = 10; then 10 − ${b - downToTen} = ${answer}.` : `${a} − ${b} = ${answer}.`, stacked(a, b, '-', answer)),
     ],
     meta: { operands: [a, b], op: '-' },
   };
@@ -187,7 +187,7 @@ export function add100(level: number, seed: number): Problem {
             `Tens: ${aTens} + ${bTens}. Ones: ${a % 10} + ${b % 10}.`,
             stacked(a, b, '+', undefined, 'tens'),
           ),
-      h(`${a} + ${b} = ${answer}.`, stacked(a, b, '+', answer)),
+      h(regroups ? `Regroup ${(a % 10) + (b % 10)} ones as 1 ten and ${answer % 10} ones. Add the tens including that extra ten: ${Math.floor(a / 10)} + ${Math.floor(b / 10)} + 1 = ${Math.floor(answer / 10)}. ${a} + ${b} = ${answer}.` : `${a} + ${b} = ${answer}.`, stacked(a, b, '+', answer)),
     ],
     meta: { operands: [a, b], op: '+' },
   };
@@ -248,7 +248,7 @@ export function sub100(level: number, seed: number): Problem {
       borrows
         ? h(
             `${a % 10} is smaller than ${b % 10}, so break one ten open: ${a} becomes ${Math.floor(a / 10) - 1} tens and ${(a % 10) + 10} ones.`,
-            stacked(a, b, '-', undefined, 'ones'),
+            { kind: 'placevalue', hundreds: 0, tens: Math.floor(a / 10) - 1, ones: (a % 10) + 10, highlight: 'ones' },
           )
         : h(`Take away the tens, then the ones.`, barmodel(a, [b, null])),
       h(
@@ -302,13 +302,16 @@ export function missingAddend(level: number, seed: number): Problem {
     const missing = rng.int(2, 9);
     const b = rng.int(2, 9);
     const total = missing + b;
+    const takenAway = rng.bool();
     return {
       ...base,
-      prompt: `___ + ${b} = ${total}`,
+      prompt: takenAway ? `${total} − ___ = ${b}` : `___ + ${b} = ${total}`,
       answer: String(missing),
       representation: { kind: 'numeric' },
       hints: [
-        h('The blank is at the front this time, but the idea is the same.', barmodel(total, [null, b])),
+        h(takenAway
+          ? `${total} is the whole; ${b} is the part left. Find the part taken away.`
+          : 'The blank is at the front this time, but the idea is the same.', barmodel(total, [null, b])),
         h(
           `${b} is one part and ${total} is the whole. Take the part you know away from the whole.`,
           barmodel(total, [null, b]),

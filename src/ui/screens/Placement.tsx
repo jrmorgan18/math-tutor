@@ -1,3 +1,4 @@
+import { editEntry } from '../../engine/answerEntry';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { AnswerPad } from '../components/AnswerPad';
@@ -79,10 +80,10 @@ export function Placement() {
         disabled={false}
         soundOn={profile.soundOn}
         reveal={null}
-        onDigit={(digit) => setEntryBoth((entryRef.current + digit).slice(0, 4))}
-        onBackspace={() => setEntryBoth(entryRef.current.slice(0, -1))}
+        onDigit={(digit) => setEntryBoth(editEntry(entryRef.current, digit, placement.problem!.representation))}
+        onBackspace={() => setEntryBoth(editEntry(entryRef.current, 'backspace', placement.problem!.representation))}
         onReplace={(next) => setEntryBoth(next.slice(0, 4))}
-        onSubmit={submit}
+        onSubmit={(value) => submit(placement.problem!.representation.kind === 'choice' ? value : entryRef.current)}
       />
 
       <button

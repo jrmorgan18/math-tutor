@@ -6,7 +6,7 @@ Runs locally in the browser; everything is stored on the device.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 145 tests
+npm test           # 162 tests
 npm run build      # static output in dist/
 ```
 
@@ -23,7 +23,7 @@ Three things now stand between a learner and that happening again:
 1. **Migrations may add and repair, but never discard.** `migrateProfile` in
    `store/db.ts` upgrades any recognisable profile to the current schema
    whatever version it claims, and `reconcileSkillStates` folds new skills into
-   a stored profile without touching a single field of what is already there.
+   a stored profile while preserving earned assets and history. Version 4 rebuilds difficulty evidence from the retained attempt log; earlier higher levels remain labelled as awaiting verification.
    The old code returned `null` on a version mismatch — which silently threw
    the profile away and sent him back through placement. **`placementDone` is
    carried across untouched: nobody re-sits a test they have already passed.**
@@ -122,23 +122,25 @@ subtraction always needs a borrow, division levels 1–3 always divide exactly).
 Because generators are pure, an attempt record stores only
 `(skillId, level, seed)` — any past question can be reconstructed exactly.
 
-### Two mastery bars
+### Understanding, fluency and retention
 
-- **Proficient** — accuracy, speed and top tier all cleared. Reachable in days.
+- **Proficient** — independent accuracy and demonstrated top difficulty cleared. Requires at least eight total attempts, six independent non-retry evidence items, and at least three at the top tier with 85% accuracy.
   This is what unlocks downstream skills and dinosaurs, so progress never
   stalls waiting on the calendar.
 - **Mastered** — proficient *and* still correct across two reviews at least a
   week apart. This is the honest "he knows it" signal, and it governs when a
   skill stops consuming session time.
 
+**Fluency** is a separate goal for fact skills. Only reliable, uninterrupted top-tier timings contribute; elapsed wall time never gates mathematical proficiency or rewards.
+
 ### The session mix
 
 | Slot | Count | Purpose |
 |---|---|---|
-| `warmup` | 4 | Mastered material. Opens with a win. |
-| `review` | 4 | Spaced retrieval of skills that are due. |
-| `working` | 11 | The 2–4 skills at the edge of his ability. |
-| `new` | 3 | Next thing in the graph, freshly unlocked. |
+| `warmup` | 2 | Mastered material. Opens with a win. |
+| `review` | 2 | Spaced retrieval of skills that are due. |
+| `working` | 9 | The 2–4 skills at the edge of his ability. |
+| `new` | 2 | Next thing in the graph, freshly unlocked. |
 | `stretch` | 2 | Above his level. **Misses are free.** |
 
 Plus a closing warm-up item, because a session that ends in failure is one he
@@ -174,7 +176,7 @@ instead of restating symbols in words.
    strategy rather than one opaque leap;
 2. a **bar model** with 54 as the whole and 45 and `?` as the parts — this is
    what makes "why is it a subtraction?" something he can *see*;
-3. the terms **stacked for subtraction**, `54 − 45 = 15`.
+3. the terms **stacked for subtraction**, `54 − 45 = 9`.
 
 Available visuals: `stacked` (column arithmetic), `numberline` (with computed
 bridging jumps), `tenframe` (make-a-ten made literal), `array`, `barmodel`

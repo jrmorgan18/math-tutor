@@ -1,3 +1,4 @@
+import { conceptProficient, practiceLevel } from './evidence';
 import { Rng, randomSeed } from './rng';
 import { generate } from './generators';
 import { getSkill, SKILLS, STRAND_NAMES, topoSortedSkills } from './skills';
@@ -53,10 +54,10 @@ export interface SessionOptions {
  * stretch  — deliberately above his level; failure is free
  */
 const MIX: Array<{ slot: SessionSlot; count: number }> = [
-  { slot: 'warmup', count: 4 },
-  { slot: 'review', count: 4 },
-  { slot: 'working', count: 11 },
-  { slot: 'new', count: 3 },
+  { slot: 'warmup', count: 2 },
+  { slot: 'review', count: 2 },
+  { slot: 'working', count: 9 },
+  { slot: 'new', count: 2 },
   { slot: 'stretch', count: 2 },
 ];
 
@@ -83,7 +84,7 @@ export function buildMissionChoices(
   const groups = new Map<StrandId, SkillState[]>();
   for (const skill of SKILLS) {
     const state = states[skill.id];
-    if (!state?.unlocked || state.mastered) continue;
+    if (!state?.unlocked || (state.mastered && conceptProficient(state))) continue;
     const list = groups.get(skill.strand) ?? [];
     list.push(state);
     groups.set(skill.strand, list);
@@ -145,7 +146,7 @@ export function buildSession(
   const workingIds = new Set(workingPool.map((s) => s.skillId));
 
   const reviewPool = unlocked
-    .filter((s) => s.attempts > 0 && s.dueAt <= now && !workingIds.has(s.skillId))
+    .filter((s) => s.attempts > 0 && s.dueAt <= now && (!workingIds.has(s.skillId) || conceptProficient(s)))
     .sort((a, b) => a.dueAt - b.dueAt);
 
   const warmupPool = unlocked
@@ -178,12 +179,13 @@ export function buildSession(
     }
   }
 
-  const targeted = applyMisconceptionStages(items, states).map(retargetPlannedItem);
-  let ordered = interleave(targeted, rng);
+  let ordered = interleave(items, rng);
 
   if (options.includeBoss) {
     ordered = insertBossInvestigation(ordered, states, options.focusStrand, rng);
   }
+
+  ordered = applyMisconceptionStages(ordered, states).map(retargetPlannedItem);
 
   // Always finish on something he can do. A session that ends in a failure is
   // a session he is slower to come back to tomorrow.
@@ -192,7 +194,7 @@ export function buildSession(
     ordered.push({
       slot: 'warmup',
       skillId: closer.skillId,
-      level: Math.max(1, closer.level - (closer.attempts > 0 ? 0 : 1)),
+      level: Math.max(1, practiceLevel(closer) - (closer.attempts > 0 ? 0 : 1)),
       seed: rng.int(1, 2 ** 30),
     });
   }
@@ -219,7 +221,7 @@ function pickFor(slot: SessionSlot, i: number, ctx: PickCtx): PlannedItem | null
       const s = pool[i % Math.max(1, pool.length)];
       if (!s) return null;
       // Warm-ups sit one tier below his working level: confidence, not challenge.
-      return { slot, skillId: s.skillId, level: Math.max(1, s.level - 1), seed };
+      return { slot, skillId: s.skillId, level: Math.max(1, practiceLevel(s) - 1), seed };
     }
 
     case 'review': {
@@ -227,13 +229,13 @@ function pickFor(slot: SessionSlot, i: number, ctx: PickCtx): PlannedItem | null
       // Nothing due yet is the normal case in week one — fall through to more
       // working-set practice rather than padding with filler.
       if (!s) return null;
-      return { slot, skillId: s.skillId, level: s.level, seed };
+      return { slot, skillId: s.skillId, level: practiceLevel(s), seed };
     }
 
     case 'working': {
       const s = ctx.workingPool[i % Math.max(1, ctx.workingPool.length)];
       if (!s) return null;
-      return { slot, skillId: s.skillId, level: s.level, seed };
+      return { slot, skillId: s.skillId, level: practiceLevel(s), seed };
     }
 
     case 'new': {
@@ -255,7 +257,7 @@ function pickFor(slot: SessionSlot, i: number, ctx: PickCtx): PlannedItem | null
       return {
         slot,
         skillId: s.skillId,
-        level: Math.min(skill.maxLevel, s.level + 1),
+        level: Math.min(skill.maxLevel, practiceLevel(s) + 1),
         seed,
       };
     }
@@ -275,7 +277,7 @@ function pickWorkingSet(
   now: number,
   focusStrand?: StrandId,
 ): SkillState[] {
-  const candidates = unlocked.filter((s) => !s.mastered);
+  const candidates = unlocked.filter((s) => !(s.mastered && conceptProficient(s)));
   const scored = candidates.map((s) => ({
     state: s,
     score:
@@ -351,7 +353,10 @@ function nextLockedSkill(states: Record<SkillId, SkillState>): SkillId | null {
 export function dominantMisconception(state: SkillState): ErrorType | null {
   const recent = state.recentErrors.slice(-6);
   const counts = new Map<ErrorType, number>();
-  for (const error of recent) counts.set(error, (counts.get(error) ?? 0) + 1);
+  for (const error of recent) {
+    if (error === 'transposition' || error === 'timeout' || state.remediation?.[error]?.resolved) continue;
+    counts.set(error, (counts.get(error) ?? 0) + 1);
+  }
   const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
   return (ranked[0]?.[1] ?? 0) >= 2 ? (ranked[0]?.[0] ?? null) : null;
 }
@@ -397,7 +402,7 @@ function applyMisconceptionStages(
     if (!state) return item;
     const targetError = dominantMisconception(state);
     if (!targetError) return item;
-    const index = seen.get(item.skillId) ?? 0;
+    const index = seen.get(item.skillId) ?? state.remediation?.[targetError]?.stage ?? 0;
     seen.set(item.skillId, index + 1);
     if (index >= stages.length) return item;
     const remediationStage = stages[index];

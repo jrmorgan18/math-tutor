@@ -125,10 +125,12 @@ export function shapes2d(level: number, seed: number): Problem {
     { name: 'hexagon', sides: 6, lines: 6 },
     { name: 'pentagon', sides: 5, lines: 5 },
   ]);
+  const name = target.name === 'triangle' ? 'equilateral triangle' :
+    ['pentagon', 'hexagon'].includes(target.name) ? `regular ${target.name}` : target.name;
   return {
     ...base,
-    prompt: `How many lines of symmetry does a regular ${target.name} have?`,
-    questionVisual: shape(target.sides, target.name, undefined, true),
+    prompt: `How many lines of symmetry does this ${name} have?`,
+    questionVisual: shape(target.sides, target.name),
     answer: String(target.lines),
     representation: { kind: 'numeric' },
     hints: [
@@ -139,11 +141,11 @@ export function shapes2d(level: number, seed: number): Problem {
       h(
         target.name === 'rectangle'
           ? 'Try folding it across the middle both ways. Then try the diagonals — do those actually match up?'
-          : 'Try a fold through each corner, and a fold through the middle of each side.',
+          : 'Each axis is one complete fold line. For even-sided regular shapes, include opposite corners and opposite side midpoints; for odd-sided ones, join a corner to the opposite side midpoint.',
         shape(target.sides, target.name, undefined, true),
       ),
       h(
-        `A regular ${target.name} has ${target.lines} lines of symmetry.`,
+        `A ${name} has ${target.lines} complete lines of symmetry.`,
         shape(target.sides, target.name, undefined, true),
       ),
     ],
@@ -206,7 +208,7 @@ export function perimeter(level: number, seed: number): Problem {
       representation: { kind: 'numeric' },
       hints: [
         h(
-          'Only two numbers are written on, but a rectangle has four sides. The opposite sides match.',
+          'A rectangle has four sides. The opposite sides match.',
           shape(4, 'rectangle', [w, hgt, w, hgt]),
         ),
         h(
@@ -247,7 +249,7 @@ export function perimeter(level: number, seed: number): Problem {
 
   const a = rng.int(3, 12);
   const b = rng.int(3, 12);
-  const c = rng.int(3, 12);
+  const c = rng.int(Math.abs(a - b) + 1, Math.min(12, a + b - 1));
   const total = a + b + c;
   return {
     ...base,

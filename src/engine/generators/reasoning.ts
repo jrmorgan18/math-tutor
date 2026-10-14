@@ -160,7 +160,9 @@ export function word1Step(level: number, seed: number): Problem {
     seed,
     flavor: template.flavor,
     prompt: template.build(a, b),
-    subPrompt: `Answer in ${template.unit}.`,
+    subPrompt: `Choose an operation, then answer in ${template.unit}.`,
+    operationChoice: { options: ops.map(o => ({ '+': 'Add', '-': 'Subtract', '×': 'Multiply', '÷': 'Divide' })[o]),
+      answer: ({ '+': 'Add', '-': 'Subtract', '×': 'Multiply', '÷': 'Divide' })[op] },
     answer: String(answer),
     representation: { kind: 'numeric' },
     hints: [

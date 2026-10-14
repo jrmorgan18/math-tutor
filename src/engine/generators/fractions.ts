@@ -226,7 +226,7 @@ export function fractionOfSet(level: number, seed: number): Problem {
 
   if (level === 2) {
     // Unit fraction of an amount that divides exactly.
-    const parts = rng.pick([2, 3, 4]);
+    const parts = rng.pick([3, 4]);
     const each = rng.int(2, 8);
     const total = parts * each;
     return {

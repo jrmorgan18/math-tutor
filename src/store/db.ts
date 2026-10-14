@@ -1,5 +1,6 @@
 import { del, get, set, setMany } from 'idb-keyval';
 import { propagateUnlocks, reconcileSkillStates } from '../engine/mastery';
+import { verifyLegacyEvidence } from '../engine/evidence';
 import type { Attempt, SkillId, SkillState } from '../engine/types';
 
 /**
@@ -102,7 +103,7 @@ const BACKUP_KEY = 'genesis-lab:backup';
 const ACTIVE_SESSION_KEY = 'genesis-lab:active-session';
 const ACTIVE_PLACEMENT_KEY = 'genesis-lab:active-placement';
 
-export const PROFILE_VERSION = 3;
+export const PROFILE_VERSION = 4;
 
 export function todayKey(now = new Date()): string {
   const y = now.getFullYear();
@@ -157,7 +158,7 @@ export function newProfile(
  * Returns null only when the stored value is not recognisably a profile at
  * all, in which case there is nothing to preserve.
  */
-export function migrateProfile(raw: unknown): Profile | null {
+export function migrateProfile(raw: unknown, attempts?: Attempt[]): Profile | null {
   if (!raw || typeof raw !== 'object') return null;
   const p = raw as Partial<Profile> & Record<string, unknown>;
   // A profile has a name and a skill-state map. Anything else is not one.
@@ -170,9 +171,11 @@ export function migrateProfile(raw: unknown): Profile | null {
 
   // Additive: new skills appear at level 1, existing ones keep their state,
   // then anything whose prerequisites he has already cleared opens up.
-  const skillStates = propagateUnlocks(reconcileSkillStates(p.skillStates as Record<SkillId, SkillState>));
+  const reconciled = reconcileSkillStates(p.skillStates as Record<SkillId, SkillState>);
+  const skillStates = propagateUnlocks(attempts ? verifyLegacyEvidence(reconciled, attempts) : reconciled);
 
   return {
+    ...p,
     version: PROFILE_VERSION,
     name: p.name,
     avatar: typeof p.avatar === 'string' && p.avatar ? p.avatar : AVATAR_OPTIONS[0],
@@ -213,10 +216,11 @@ function migrateExpedition(raw: unknown): Expedition | null {
   const e = raw as Partial<Expedition>;
   if (typeof e.weekKey !== 'string') return null;
   return {
+    ...e,
     weekKey: e.weekKey,
     siteId: typeof e.siteId === 'string' ? e.siteId : 'badlands',
     goalSessions: Math.max(1, Math.round(Number(e.goalSessions) || 4)),
-    goalNewSkills: Math.max(0, Math.round(Number(e.goalNewSkills) || 1)),
+    goalNewSkills: Math.max(0, Math.round(typeof e.goalNewSkills === 'number' ? e.goalNewSkills : 1)),
     sessionsDone: Math.max(0, Math.round(Number(e.sessionsDone) || 0)),
     skillsAdvanced: Array.isArray(e.skillsAdvanced)
       ? e.skillsAdvanced.filter((x): x is string => typeof x === 'string')
@@ -230,7 +234,7 @@ export async function loadProfile(): Promise<Profile | null> {
   if (!raw) return null;
 
   const storedVersion = (raw as Partial<Profile>).version;
-  const migrated = migrateProfile(raw);
+  const migrated = migrateProfile(raw, await loadAttempts());
   if (!migrated) return null;
 
   // Persist the upgrade, but snapshot the old shape first — if a migration
@@ -260,10 +264,9 @@ export async function saveLearningCheckpoint<T>(
   attempts: Attempt[],
   activeSession: T | null,
 ): Promise<void> {
-  const trimmed = attempts.length > 20_000 ? attempts.slice(-20_000) : attempts;
   await setMany([
     [PROFILE_KEY, profile],
-    [ATTEMPTS_KEY, trimmed],
+    [ATTEMPTS_KEY, attempts],
     [ACTIVE_SESSION_KEY, activeSession],
   ]);
 }
@@ -277,14 +280,12 @@ export async function loadAttempts(): Promise<Attempt[]> {
 }
 
 /**
- * Append attempts. The log is capped so a year of daily use cannot grow
- * unbounded on a tablet; 20,000 attempts is roughly two years of sessions.
+ * Append attempts without silently discarding earned learning history.
  */
 export async function appendAttempts(attempts: Attempt[]): Promise<void> {
   const existing = await loadAttempts();
   const combined = [...existing, ...attempts];
-  const trimmed = combined.length > 20_000 ? combined.slice(-20_000) : combined;
-  await set(ATTEMPTS_KEY, trimmed);
+  await set(ATTEMPTS_KEY, combined);
 }
 
 export interface BackupSnapshot {
@@ -331,7 +332,7 @@ export async function loadBackup(): Promise<BackupSnapshot | null> {
 export async function restoreBackup(): Promise<Profile | null> {
   const snapshot = await loadBackup();
   if (!snapshot) return null;
-  const profile = migrateProfile(snapshot.profile);
+  const profile = migrateProfile(snapshot.profile, snapshot.attempts ?? []);
   if (!profile) return null;
   await set(PROFILE_KEY, profile);
   await set(ATTEMPTS_KEY, snapshot.attempts ?? []);
@@ -382,7 +383,7 @@ export async function importAll(json: string): Promise<void> {
 
   // Migrate rather than reject on version mismatch: a backup taken before an
   // update is exactly the backup most worth being able to restore.
-  const profile = migrateProfile(parsed.profile);
+  const profile = migrateProfile(parsed.profile, Array.isArray(parsed.attempts) ? parsed.attempts : []);
   if (!profile) {
     throw new Error('That file doesn’t contain a profile this app can read.');
   }

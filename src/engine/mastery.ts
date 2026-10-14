@@ -1,5 +1,6 @@
 import { getSkill, SKILLS, topoSortedSkills } from './skills';
 import type { Attempt, SkillId, SkillState } from './types';
+import { conceptProficient, demonstratedLevel, isIndependent } from './evidence';
 
 const DAY = 86_400_000;
 
@@ -26,6 +27,12 @@ export function initialSkillState(skillId: SkillId): SkillState {
   return {
     skillId,
     level: 1,
+    levelEvidence: {},
+    demonstratedLevel: 0,
+    evidenceVerified: true,
+    fluent: false,
+    retentionAnchorAt: null,
+    remediation: {},
     accuracy: null,
     medianLatencyMs: null,
     recentLatencies: [],
@@ -102,6 +109,15 @@ function repairSkillState(skillId: SkillId, prior: Partial<SkillState>): SkillSt
       : Math.min(rawDueAt, lastSeenAt + MAX_INTERVAL_DAYS * DAY);
 
   return {
+    ...base,
+    levelEvidence: prior.levelEvidence ?? {},
+    demonstratedLevel: prior.demonstratedLevel ?? 0,
+    evidenceVerified: prior.evidenceVerified === true,
+    legacyLevel: prior.legacyLevel ?? (prior.evidenceVerified ? undefined : prior.level),
+    legacyState: prior.legacyState ?? (prior.evidenceVerified ? undefined : { ...prior }),
+    fluent: prior.fluent === true,
+    retentionAnchorAt: prior.retentionAnchorAt ?? null,
+    remediation: prior.remediation ?? {},
     skillId,
     // Clamp: maxLevel can shrink when a skill is retuned, and a level past the
     // end would generate an out-of-range problem.
@@ -118,8 +134,8 @@ function repairSkillState(skillId: SkillId, prior: Partial<SkillState>): SkillSt
       ? prior.recentLatencies.filter((n): n is number => typeof n === 'number' && Number.isFinite(n)).slice(-10)
       : [],
     attempts: Math.max(0, Math.round(num(prior.attempts, 0))),
-    // Older profiles did not distinguish support. Treat their accumulated
-    // evidence as independent so an upgrade never takes proficiency away.
+    // Retain legacy aggregates for historical reporting. Difficulty claims are
+    // separately verified from actual independent attempts before new unlocks.
     independentAccuracy:
       typeof prior.independentAccuracy === 'number' && Number.isFinite(prior.independentAccuracy)
         ? Math.min(Math.max(prior.independentAccuracy, 0), 1)
@@ -192,11 +208,11 @@ export function applyAttempt(
       ? score
       : state.accuracy + ACCURACY_ALPHA * (score - state.accuracy);
 
-  const supported = attempt.hintsUsed > 0 || attempt.remediationStage === 'concrete' || attempt.remediationStage === 'faded';
+  const supported = !isIndependent(attempt);
   if (supported) {
     next.supportedAttempts = state.supportedAttempts + 1;
     next.supportedAccuracy = ewma(state.supportedAccuracy, attempt.correct ? 1 : 0);
-  } else {
+  } else if (!attempt.retry) {
     next.independentAttempts = state.independentAttempts + 1;
     next.independentAccuracy = ewma(state.independentAccuracy, attempt.correct ? 1 : 0);
   }
@@ -210,89 +226,105 @@ export function applyAttempt(
     next.recentErrors = [...state.recentErrors, attempt.errorType].slice(-RECENT_ERROR_WINDOW);
   }
 
-  if (attempt.correct && !supported) {
+  if (attempt.correct && !supported && !attempt.retry && attempt.timingReliable === true && attempt.level === skill.maxLevel) {
     next.recentLatencies.push(attempt.latencyMs);
     if (next.recentLatencies.length > 10) next.recentLatencies.shift();
     next.medianLatencyMs = median(next.recentLatencies);
   }
 
-  // ---- difficulty tier -------------------------------------------------
-  if (attempt.correct) {
-    next.missStreak = 0;
-    // Helped and retry successes are useful learning evidence, but they do not
-    // prove that the learner is ready for harder unaided work.
-    const levelEvidence = !supported && !attempt.retry;
-    next.streak = levelEvidence ? state.streak + 1 : state.streak;
-    const inBand =
-      attempt.latencyMs <= latencyBandFor(state.skillId, state.level);
-    if (
-      levelEvidence &&
-      next.streak >= LEVEL_UP_STREAK &&
-      next.level < skill.maxLevel &&
-      // Only fluency skills gate the level-up on speed. Timing a new concept
-      // teaches anxiety, not maths.
-      (!skill.fluency || inBand)
-    ) {
-      next.level += 1;
-      next.streak = 0;
+  // Each tier has its own independent, non-retry evidence.
+  next.levelEvidence = { ...state.levelEvidence };
+  const eligible = !supported && !attempt.retry;
+  if (eligible) {
+    const row = next.levelEvidence[attempt.level] ?? { attempts: 0, correct: 0, streak: 0 };
+    next.levelEvidence[attempt.level] = {
+      attempts: row.attempts + 1,
+      correct: row.correct + Number(attempt.correct),
+      streak: attempt.correct ? row.streak + 1 : 0,
+    };
+    next.evidenceVerified = true;
+    next.demonstratedLevel = demonstratedLevel(next);
+    if ((next.demonstratedLevel ?? 0) > (state.demonstratedLevel ?? 0)) {
+      next.level = Math.min(skill.maxLevel, (next.demonstratedLevel ?? 0) + 1);
     }
-  } else {
-    next.missStreak = state.missStreak + 1;
-    next.streak = 0;
-    if (next.missStreak >= LEVEL_DOWN_STREAK && next.level > 1) {
-      next.level -= 1;
-      next.missStreak = 0;
+    if (attempt.correct && attempt.level === state.level &&
+        (next.levelEvidence[attempt.level]?.streak ?? 0) >= LEVEL_UP_STREAK &&
+        (next.demonstratedLevel ?? 0) >= attempt.level) {
+      next.level = Math.min(skill.maxLevel, attempt.level + 1);
+    }
+    if (!attempt.correct && attempt.level === state.level) {
+      next.missStreak = state.missStreak + 1;
+      if (next.missStreak >= LEVEL_DOWN_STREAK) {
+        next.level = Math.max(1, attempt.level - 1);
+        next.missStreak = 0;
+      }
+    } else if (attempt.correct) next.missStreak = 0;
+    next.streak = next.levelEvidence[attempt.level]?.streak ?? 0;
+  }
+
+  // Recurrence reopens support; independent transfer retires historical errors.
+  next.remediation = { ...state.remediation };
+  for (const error of new Set(state.recentErrors)) {
+    next.remediation[error] ??= { stage: 0, successes: 0, resolved: false };
+  }
+  if (!attempt.correct && attempt.errorType !== 'timeout' && attempt.errorType !== 'transposition') {
+    next.remediation[attempt.errorType] = { stage: 0, successes: 0, resolved: false };
+  } else if (attempt.correct) {
+    for (const [error, outcome] of Object.entries(next.remediation)) {
+      if (!outcome || outcome.resolved) continue;
+      const relevant = attempt.targetError === error ||
+        (error === 'regrouping' ? attempt.conceptTags?.includes('regrouping') :
+          error === 'place-value' || error === 'off-by-ten' ? attempt.conceptTags?.includes('place-value') : true);
+      if (!relevant) continue;
+      const stage = attempt.remediationStage === 'concrete' ? 1 :
+        attempt.remediationStage === 'faded' ? 2 : outcome.stage;
+      const successes = outcome.successes + (eligible && attempt.level >= (state.demonstratedLevel ?? 1) ? 1 : 0);
+      next.remediation[error as keyof typeof next.remediation] = {
+        stage: eligible ? 2 : Math.max(outcome.stage, stage), successes, resolved: successes >= 3,
+      };
     }
   }
 
   // ---- spaced repetition ----------------------------------------------
-  const gapDays =
-    state.lastSeenAt === null ? 0 : (now - state.lastSeenAt) / DAY;
-  const dueReview =
-    attempt.slot !== 'stretch' &&
-    state.lastSeenAt !== null &&
-    now >= state.dueAt;
+  const topEvidence = next.levelEvidence?.[skill.maxLevel];
+  const independentEvidenceCount = Object.values(next.levelEvidence ?? {}).reduce((sum, row) => sum + row.attempts, 0);
+  next.proficient = next.attempts >= MIN_ATTEMPTS &&
+    independentEvidenceCount >= MIN_INDEPENDENT_ATTEMPTS &&
+    (next.independentAccuracy ?? 0) >= PROFICIENT_ACCURACY &&
+    (topEvidence?.attempts ?? 0) >= LEVEL_UP_STREAK &&
+    (topEvidence ? topEvidence.correct / topEvidence.attempts : 0) >= PROFICIENT_ACCURACY &&
+    (next.demonstratedLevel ?? 0) >= skill.maxLevel;
+  next.fluent = skill.fluency && next.proficient && next.recentLatencies.length >= 6 &&
+    next.medianLatencyMs !== null && next.medianLatencyMs <= latencyBandFor(state.skillId, skill.maxLevel);
 
-  if (attempt.correct) {
-    if (dueReview && gapDays >= RETENTION_GAP_DAYS) {
+  // Anchor to verification, not every practice touch: daily practice cannot
+  // forever push a seven-day check into the future. Supported work never passes it.
+  const anchor = state.retentionAnchorAt ?? state.lastSeenAt;
+  const retentionEligible = eligible && attempt.level === skill.maxLevel && next.proficient;
+  if (retentionEligible && attempt.correct) {
+    if (anchor !== null && now - anchor >= RETENTION_GAP_DAYS * DAY) {
       next.retentionChecks = state.retentionChecks + 1;
-    }
-    if (state.lastSeenAt === null) {
-      // First exposure: come back tomorrow. More correct work in this same
-      // sitting must not inflate the interval.
-      next.intervalDays = 1;
-      next.dueAt = now + DAY;
-    } else if (dueReview) {
-      // SM-2-lite, advanced only by a genuinely spaced retrieval.
-      next.intervalDays = nextInterval(state.intervalDays);
-      next.dueAt = now + next.intervalDays * DAY;
-    } else {
-      next.intervalDays = state.intervalDays;
-      next.dueAt = state.dueAt;
-    }
-  } else {
-    // A miss resets the schedule; it needs to come back tomorrow.
+      next.retentionAnchorAt = now;
+    } else if (state.retentionAnchorAt == null) next.retentionAnchorAt = now;
+  }
+  if (eligible && !attempt.correct) {
     next.intervalDays = 1;
     next.retentionChecks = 0;
+    next.retentionAnchorAt = now;
     next.dueAt = now + DAY;
+  } else if (eligible && attempt.correct && attempt.level >= (state.demonstratedLevel ?? 1)) {
+    if (state.lastSeenAt === null) {
+      next.dueAt = now + DAY;
+    } else if (now >= state.dueAt) {
+      next.intervalDays = nextInterval(state.intervalDays);
+      next.dueAt = now + next.intervalDays * DAY;
+    }
+  }
+  if (next.proficient && next.retentionChecks < RETENTION_CHECKS_NEEDED) {
+    next.dueAt = Math.min(next.dueAt, (next.retentionAnchorAt ?? now) + RETENTION_GAP_DAYS * DAY);
   }
   next.lastSeenAt = now;
-
-  // ---- proficiency and mastery ----------------------------------------
-  const latencyOk =
-    !skill.fluency ||
-    (next.medianLatencyMs !== null &&
-      next.medianLatencyMs <= latencyBandFor(state.skillId, skill.maxLevel));
-
-  next.proficient =
-    next.attempts >= MIN_ATTEMPTS &&
-    next.independentAttempts >= MIN_INDEPENDENT_ATTEMPTS &&
-    (next.independentAccuracy ?? 0) >= PROFICIENT_ACCURACY &&
-    next.level >= skill.maxLevel &&
-    latencyOk;
-
-  next.mastered =
-    next.proficient && next.retentionChecks >= RETENTION_CHECKS_NEEDED;
+  next.mastered = next.proficient && next.retentionChecks >= RETENTION_CHECKS_NEEDED;
 
   return next;
 }
@@ -319,7 +351,7 @@ export function propagateUnlocks(
   for (const skill of topoSortedSkills()) {
     const state = next[skill.id];
     if (!state || state.unlocked) continue;
-    const ready = skill.requires.every((r) => next[r]?.proficient === true);
+    const ready = skill.requires.every((r) => conceptProficient(next[r]));
     if (ready) next[skill.id] = { ...state, unlocked: true };
   }
   return next;
@@ -350,7 +382,7 @@ function median(values: number[]): number | null {
 /** 0..1 progress toward proficiency, for progress bars. */
 export function progressToward(state: SkillState): number {
   const skill = getSkill(state.skillId);
-  const levelPart = (state.level - 1) / Math.max(1, skill.maxLevel - 1);
+  const levelPart = (state.demonstratedLevel ?? 0) / skill.maxLevel;
   const accPart = Math.min(1, (state.independentAccuracy ?? 0) / PROFICIENT_ACCURACY);
   const attemptPart = Math.min(1, state.attempts / MIN_ATTEMPTS);
   return Math.min(1, levelPart * 0.5 + accPart * 0.3 + attemptPart * 0.2);

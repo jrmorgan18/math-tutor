@@ -8,7 +8,7 @@ import { dinoById, gateLabel, nextTarget } from '../../content/dinosaurs';
 import { getSkill } from '../../engine/skills';
 import { todayKey } from '../../store/db';
 import { ExpeditionCard } from '../components/ExpeditionCard';
-import { discoveryById } from '../../content/discoveries';
+import { Discoveries } from '../components/Discoveries';
 
 /**
  * Pick a stable "today's fact" from his hatched collection — stable within a
@@ -56,11 +56,6 @@ export function Home() {
     profile.dailyDnaDay === todayKey()
       ? Math.max(0, DAILY_DNA_CAP - profile.dailyDna)
       : DAILY_DNA_CAP;
-
-  const recentDiscoveries = profile.discoveries
-    .slice(-3)
-    .map(discoveryById)
-    .filter((item): item is NonNullable<typeof item> => !!item);
 
   const factDino =
     profile.hatched.length > 0
@@ -173,24 +168,12 @@ export function Home() {
         ) : null}
       </div>
 
-      {recentDiscoveries.length > 0 ? (
-        <div className="card">
-          <h3>Lab discoveries · Level {profile.labLevel}</h3>
-          <div className="discovery-row">
-            {recentDiscoveries.map((item) => (
-              <div className="discovery-chip" key={item.id} title={item.text}>
-                <span>{item.glyph}</span>
-                <small>{item.title}</small>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
+      <Discoveries ids={profile.discoveries} labLevel={profile.labLevel} />
 
       {/* -------------------------------------------------- field notes */}
       {factDino ? (
         <div className="card">
-          <h3>Field notes</h3>
+          <h3>Today’s dinosaur fact</h3>
           <div className="row" style={{ alignItems: 'flex-start' }}>
             <span style={{ fontSize: 28 }}>{factDino.glyph}</span>
             <p className="small dim" style={{ margin: 0 }}>

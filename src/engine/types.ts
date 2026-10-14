@@ -167,6 +167,7 @@ export interface Problem {
   questionVisual?: HintVisual;
   /** Canonical correct answer as a string, compared after normalisation. */
   answer: string;
+  operationChoice?: { options: string[]; answer: string };
   representation: Representation;
   /**
    * Progressive hints. Index 0 is the gentlest nudge; the last entry is the
@@ -216,6 +217,11 @@ export interface Attempt {
   latencyMs: number;
   /** How far down the hint ladder they went, 0 = unaided. */
   hintsUsed: number;
+  /** New telemetry; absence means the origin of legacy support is unknown. */
+  automaticHints?: number;
+  requestedHints?: number;
+  timingReliable?: boolean;
+  chosenOperation?: string;
   /** Which slot of the session mix produced this problem. */
   slot: SessionSlot;
   at: number;
@@ -253,6 +259,16 @@ export interface BossMeta {
 export interface SkillState {
   skillId: SkillId;
   level: number;
+  /** Evidence is tied to the difficulty actually answered, never the session slot. */
+  levelEvidence?: Record<number, { attempts: number; correct: number; streak: number }>;
+  demonstratedLevel?: number;
+  evidenceVerified?: boolean;
+  legacyLevel?: number;
+  /** Original skill record retained when corrected evidence replaces legacy claims. */
+  legacyState?: Partial<Omit<SkillState, 'legacyState'>>;
+  fluent?: boolean;
+  retentionAnchorAt?: number | null;
+  remediation?: Partial<Record<ErrorType, { stage: number; successes: number; resolved: boolean }>>;
   /** Recency-weighted accuracy in [0,1]. Null until first attempt. */
   accuracy: number | null;
   medianLatencyMs: number | null;
@@ -282,7 +298,7 @@ export interface SkillState {
   /** Count of spaced reviews passed at >= 7 day intervals. */
   retentionChecks: number;
   /**
-   * Accuracy + latency + top level all cleared. Reachable in days, and this is
+   * Independent accuracy and demonstrated top difficulty cleared. Reachable in days, and this is
    * what unlocks downstream skills and dinosaur species — so progress never
    * stalls waiting on the calendar.
    */

@@ -45,7 +45,7 @@ function attempt(over: Partial<Attempt> = {}): Attempt {
 }
 
 describe('mastery model', () => {
-  it('levels up after a run of fast correct answers', () => {
+  it('levels up after independent evidence at the current difficulty', () => {
     let state = initialSkillStates()['add-20'] as SkillState;
     for (let i = 0; i < 3; i++) {
       state = applyAttempt(state, attempt({ latencyMs: 1500 }));
@@ -53,19 +53,20 @@ describe('mastery model', () => {
     expect(state.level).toBe(2);
   });
 
-  it('does not level up a fluency skill on slow answers', () => {
+  it('levels understanding independently of fluency speed', () => {
     let state = initialSkillStates()['add-20'] as SkillState;
     for (let i = 0; i < 5; i++) {
       state = applyAttempt(state, attempt({ latencyMs: 30_000 }));
     }
-    expect(state.level).toBe(1);
+    expect(state.level).toBe(2);
+    expect(state.fluent).toBe(false);
   });
 
   it('drops a level after two misses in a row', () => {
     let state = initialSkillStates()['add-100'] as SkillState;
     state = { ...state, level: 3 };
-    state = applyAttempt(state, attempt({ skillId: 'add-100', correct: false }));
-    state = applyAttempt(state, attempt({ skillId: 'add-100', correct: false }));
+    state = applyAttempt(state, attempt({ skillId: 'add-100', level: 3, correct: false }));
+    state = applyAttempt(state, attempt({ skillId: 'add-100', level: 3, correct: false }));
     expect(state.level).toBe(2);
   });
 
@@ -163,15 +164,15 @@ describe('mastery model', () => {
 
   it('requires top level, accuracy and volume before claiming proficiency', () => {
     let state = initialSkillStates()['add-20'] as SkillState;
-    for (let i = 0; i < 7; i++) {
-      state = applyAttempt(state, attempt({ latencyMs: 1500 }));
+    for (let i = 0; i < 8; i++) {
+      state = applyAttempt(state, attempt({ level: state.level, latencyMs: 1500 }));
     }
     expect(state.level).toBe(getSkill('add-20').maxLevel);
-    // Level is maxed but the attempt floor is not yet met.
-    expect(state.attempts).toBeLessThan(8);
+    // The working tier is maxed, but top-tier evidence is still insufficient.
+    expect(state.levelEvidence?.[3]?.attempts).toBeLessThan(3);
     expect(state.proficient).toBe(false);
 
-    state = applyAttempt(state, attempt({ latencyMs: 1500 }));
+    state = applyAttempt(state, attempt({ level: state.level, latencyMs: 1500 }));
     expect(state.proficient).toBe(true);
   });
 
@@ -179,7 +180,7 @@ describe('mastery model', () => {
     let state = initialSkillStates()['add-20'] as SkillState;
     let now = Date.now();
     for (let i = 0; i < 10; i++) {
-      state = applyAttempt(state, attempt({ latencyMs: 1500 }), now);
+      state = applyAttempt(state, attempt({ level: state.level, latencyMs: 1500 }), now);
       now += 60_000;
     }
     expect(state.proficient).toBe(true);
@@ -187,10 +188,10 @@ describe('mastery model', () => {
 
     // Two successful reviews, each more than a week later.
     now += 8 * DAY;
-    state = applyAttempt(state, attempt({ latencyMs: 1500 }), now);
+    state = applyAttempt(state, attempt({ level: state.level, latencyMs: 1500 }), now);
     expect(state.mastered).toBe(false);
     now += 20 * DAY;
-    state = applyAttempt(state, attempt({ latencyMs: 1500 }), now);
+    state = applyAttempt(state, attempt({ level: state.level, latencyMs: 1500 }), now);
     expect(state.mastered).toBe(true);
   });
 

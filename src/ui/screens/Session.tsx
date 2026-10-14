@@ -5,6 +5,7 @@ import { ProblemView } from '../components/ProblemView';
 import { HintVisualView } from '../components/HintVisualView';
 import { sfx } from '../audio';
 import { cancelSpeech, speak } from '../tts';
+import { editEntry, SolveClock } from '../../engine/answerEntry';
 import { getSkill } from '../../engine/skills';
 import { derivePredict } from '../../engine/predict';
 import { openingRung } from '../../engine/adaptiveHints';
@@ -46,19 +47,39 @@ export function Session() {
    * stale value, silently dropping a digit.
    */
   const entryRef = useRef('');
+  const operationRef = useRef<string | undefined>(undefined);
+  const [operationPick, setOperationPick] = useState<string | null>(null);
 
   const setEntryBoth = (next: string) => {
     entryRef.current = next;
     setEntry(next);
   };
 
+  const clock = useRef(new SolveClock(performance.now()));
   const itemKey = `${session?.index}-${session?.problem?.seed}`;
   useEffect(() => {
+    clock.current = new SolveClock(performance.now());
     entryRef.current = '';
     setEntry('');
     setPredictPick(null);
+    setOperationPick(null);
+    operationRef.current = undefined;
     setReflectPick(null);
   }, [itemKey]);
+
+  useEffect(() => {
+    const pause = () => clock.current.pause(performance.now());
+    const resume = () => clock.current.resume(performance.now());
+    const visibility = () => document.hidden ? pause() : resume();
+    window.addEventListener('blur', pause);
+    window.addEventListener('focus', resume);
+    document.addEventListener('visibilitychange', visibility);
+    return () => {
+      window.removeEventListener('blur', pause);
+      window.removeEventListener('focus', resume);
+      document.removeEventListener('visibilitychange', visibility);
+    };
+  }, []);
 
   /**
    * On a retry item, open the ladder at the rung that addresses the mistake
@@ -78,6 +99,7 @@ export function Session() {
       revealHintsTo(1);
       return;
     }
+    if (item.remediationStage === 'transfer') return;
     if (!item.retry || !priorAttempt || priorAttempt.correct) return;
     const rung = openingRung(s.problem, priorAttempt.errorType);
     if (rung > 0) revealHintsTo(rung);
@@ -121,6 +143,7 @@ export function Session() {
   const ladderExhausted = hintsUsed >= problem.hints.length;
 
   const predict = item && PREDICT_SLOTS.has(item.slot) ? derivePredict(problem) : null;
+  const operationPending = phase === 'answering' && !!problem.operationChoice && operationPick !== problem.operationChoice.answer;
   const predictPending = phase === 'answering' && predict !== null && predictPick === null;
 
   const submit = (value: string, timedOut = false) => {
@@ -134,7 +157,7 @@ export function Session() {
       if (session.combo + 1 >= 6) sfx.dna(soundOn);
       sfx.correct(soundOn);
     } else sfx.wrong(soundOn);
-    void submitAnswer(value, timedOut);
+    void submitAnswer(value, timedOut, { ...clock.current.read(performance.now()), chosenOperation: operationRef.current });
   };
 
   const requestHint = () => {
@@ -215,8 +238,19 @@ export function Session() {
         }
       />
 
+      {operationPending && problem.operationChoice ? <div className="interstitial">
+        <div className="interstitial-question">Which operation will solve this story?</div>
+        {operationPick ? <p>Think about whether the amounts join, separate, form equal groups, or are shared. Choose again.</p> : null}
+        <div className="interstitial-choices">
+          {problem.operationChoice.options.map(option => <button key={option} className="interstitial-choice" onClick={() => {
+            operationRef.current ??= option;
+            setOperationPick(option);
+            if (option !== problem.operationChoice?.answer) revealHintsTo(2);
+          }}>{option}</button>)}
+        </div>
+      </div> : null}
       {/* --------------------------------------------------- predict */}
-      {!answered && predictPending && predict ? (
+      {!answered && !operationPending && predictPending && predict ? (
         <div className="interstitial">
           <div className="interstitial-question">{predict.question}</div>
           <div className="interstitial-choices">
@@ -258,7 +292,7 @@ export function Session() {
                 🔊
               </button>
               <span className="hint-label">
-                {i === 0 ? 'Nudge' : i === 1 ? 'Strategy' : 'Worked through'}
+                {i < (session.automaticHints ?? 0) ? 'Lab support' : i === 0 ? 'Nudge' : i === 1 ? 'Strategy' : 'Worked through'}
               </span>
               {hint.text}
               {hint.visual ? <HintVisualView visual={hint.visual} /> : null}
@@ -335,6 +369,8 @@ export function Session() {
                 <div className="dim" style={{ marginTop: 6 }}>
                   {problem.hints.at(-1)?.text}
                 </div>
+                {problem.skillId === 'shapes-2d' && problem.level === 4 && problem.hints.at(-1)?.visual
+                  ? <HintVisualView visual={problem.hints.at(-1)!.visual!} /> : null}
               </div>
               {item?.slot === 'stretch' ? (
                 <div className="small dim" style={{ marginTop: 8 }}>
@@ -355,7 +391,7 @@ export function Session() {
 
       {/* -------------------------------------------------- input */}
       {!answered ? (
-        predictPending ? null : (
+        predictPending || operationPending ? null : (
           <>
             <div className="row" style={{ marginBottom: 10 }}>
               <button
@@ -379,22 +415,11 @@ export function Session() {
               soundOn={soundOn}
               reveal={null}
               onDigit={(digit) => {
-                const next = (entryRef.current + digit).slice(0, 4);
-                setEntryBoth(next);
-                // Auto-submit saves a tap on single-digit keypad answers, but
-                // must never fire in build mode — there he is still adjusting
-                // the count and every tap would submit.
-                if (
-                  problem.representation.kind === 'numeric' &&
-                  problem.answer.length === 1 &&
-                  next.length === 1
-                ) {
-                  submit(next);
-                }
+                setEntryBoth(editEntry(entryRef.current, digit, problem.representation));
               }}
-              onBackspace={() => setEntryBoth(entryRef.current.slice(0, -1))}
+              onBackspace={() => setEntryBoth(editEntry(entryRef.current, 'backspace', problem.representation))}
               onReplace={(next) => setEntryBoth(next.slice(0, 4))}
-              onSubmit={(value) => submit(value)}
+              onSubmit={(value) => submit(problem.representation.kind === 'choice' ? value : entryRef.current)}
             />
           </>
         )

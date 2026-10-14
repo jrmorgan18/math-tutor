@@ -1,3 +1,4 @@
+import { conceptProficient } from '../engine/evidence';
 import { ERROR_LABELS } from '../engine/errors';
 import { getSkill, skillExists } from '../engine/skills';
 import type { Attempt, ErrorType, SkillId, SkillState } from '../engine/types';
@@ -26,6 +27,9 @@ export interface WeeklyDigest {
   sessions: number;
   minutes: number;
   hintRatePct: number;
+  automaticSupportCount: number;
+  requestedSupportCount: number;
+  legacySupportCount: number;
   /** Skills worked on, best-first by accuracy. */
   perSkill: Array<{
     skillId: SkillId;
@@ -86,8 +90,8 @@ export function buildWeeklyDigest(
       name: getSkill(skillId).name,
       attempts: row.attempts,
       accuracyPct: Math.round((row.correct / row.attempts) * 100),
-      level: skillStates[skillId]?.level ?? 1,
-      proficient: skillStates[skillId]?.proficient === true,
+      level: skillStates[skillId]?.demonstratedLevel ?? 0,
+      proficient: conceptProficient(skillStates[skillId]),
     }))
     .sort((a, b) => b.attempts - a.attempts);
 
@@ -115,6 +119,9 @@ export function buildWeeklyDigest(
       scored.length > 0
         ? Math.round((scored.filter((a) => a.hintsUsed > 0).length / scored.length) * 100)
         : 0,
+    automaticSupportCount: scored.filter(a => (a.automaticHints ?? 0) > 0).length,
+    requestedSupportCount: scored.filter(a => (a.requestedHints ?? 0) > 0).length,
+    legacySupportCount: scored.filter(a => a.hintsUsed > 0 && a.automaticHints === undefined && a.requestedHints === undefined).length,
     perSkill,
     topErrors,
     stretchAttempted: stretch.length,

@@ -1349,3 +1349,16 @@ input[type='text'] {
     min-height: 122px;
   }
 }
+
+/* Collection details use native modal focus trapping and Escape dismissal. */
+.discovery-chip { color: var(--text); font: inherit; cursor: pointer; min-height: 64px; }
+.discovery-chip:focus-visible, button:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+.discovery-detail { color: var(--text); background: var(--bg-card); border: 1px solid var(--line); border-radius: 16px; padding: 24px; width: min(540px, calc(100vw - 32px)); max-height: 85dvh; overflow: auto; }
+.discovery-detail::backdrop { background: #000b; }
+.discovery-detail p { user-select: text; }
+
+.nlpad-scroll { overflow-x: auto; padding: 16px 24px; }
+.nlpad-tick { width: 44px; min-height: 48px; touch-action: manipulation; }
+.colpad-box.active { outline: 3px solid var(--cyan); outline-offset: 3px; }
+
+.key-go:active { background: var(--amber); color: #1a1205; }

@@ -196,6 +196,24 @@ function CoinRow({ v }: { v: Extract<HintVisual, { kind: 'coins' }> }) {
 
 /* -------------------------------------------------------------- polygons */
 
+export function symmetryAxes(points: Array<readonly [number, number]>, rectangle = false) {
+  const n = points.length;
+  const midpoint = (i: number): readonly [number, number] => {
+    const a = points[i % n]!; const b = points[(i + 1) % n]!;
+    return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  };
+  const axes: Array<[readonly [number, number], readonly [number, number]]> = [];
+  if (n % 2 === 0) {
+    for (let i = 0; i < n / 2; i++) {
+      if (!rectangle) axes.push([points[i]!, points[i + n / 2]!]);
+      axes.push([midpoint(i), midpoint(i + n / 2)]);
+    }
+  } else {
+    for (let i = 0; i < n; i++) axes.push([points[i]!, midpoint(i + (n - 1) / 2)]);
+  }
+  return axes;
+}
+
 function Polygon({ v }: { v: Extract<HintVisual, { kind: 'shape' }> }) {
   const C = 60;
   const R = 44;
@@ -213,7 +231,7 @@ function Polygon({ v }: { v: Extract<HintVisual, { kind: 'shape' }> }) {
   const rect =
     n === 4 && v.sideLabels?.length === 4
       ? { w: v.sideLabels[0] as number, h: v.sideLabels[1] as number }
-      : null;
+      : n === 4 && v.label === 'rectangle' ? { w: 8, h: 5 } : null;
 
   let points: Array<readonly [number, number]>;
   if (rect) {
@@ -227,6 +245,14 @@ function Polygon({ v }: { v: Extract<HintVisual, { kind: 'shape' }> }) {
       [C + halfW, C + halfH],
       [C - halfW, C + halfH],
     ];
+  } else if (n === 3 && v.sideLabels?.length === 3) {
+    const [a, b, c] = v.sideLabels as [number, number, number];
+    const x = (c * c + a * a - b * b) / (2 * a);
+    const y = Math.sqrt(Math.max(0, c * c - x * x));
+    const lo = Math.min(0, x), hi = Math.max(a, x);
+    const scale = 2 * R / Math.max(hi - lo, y, 1);
+    const raw = [[0, 0], [a, 0], [x, -y]];
+    points = raw.map(([px, py]) => [C + (px! - (lo + hi) / 2) * scale, C + (py! + y / 2) * scale] as const);
   } else {
     // Point-down start angle so a triangle sits on a flat base and a square
     // reads as a square rather than a diamond.
@@ -241,18 +267,10 @@ function Polygon({ v }: { v: Extract<HintVisual, { kind: 'shape' }> }) {
     <div className="viz">
       <svg viewBox="0 0 120 120" className="viz-svg viz-shape" role="img" aria-label={v.label ?? `${n}-sided shape`}>
         <polygon points={points.map(([x, y]) => `${x},${y}`).join(' ')} className="viz-poly" />
-        {v.symmetry
-          ? points.map(([x, y], i) => (
-              <line
-                key={`sym${i}`}
-                x1={x}
-                y1={y}
-                x2={C}
-                y2={C}
-                className="viz-poly-symmetry"
-              />
-            ))
-          : null}
+        {v.symmetry ? symmetryAxes(points, v.label === 'rectangle').map(([start, end], i) => (
+          <line key={`sym${i}`} x1={start[0]} y1={start[1]} x2={end[0]} y2={end[1]}
+            className="viz-poly-symmetry" />
+        )) : null}
         {v.sideLabels?.map((len, i) => {
           const [x0, y0] = points[i] as readonly [number, number];
           const [x1, y1] = points[(i + 1) % n] as readonly [number, number];
@@ -464,7 +482,7 @@ function NumberLine({ v }: { v: Extract<HintVisual, { kind: 'numberline' }> }) {
                 strokeWidth="2.5"
               />
               <text x={midX} y={arcTop - 2} textAnchor="middle" className="viz-label viz-label-accent">
-                +{Math.abs(next - s)}
+                {dir > 0 ? '+' : '−'}{Math.abs(next - s)}
               </text>
             </g>
           );
