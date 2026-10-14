@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import type { Problem } from '../../engine/types';
+import { clarifyRemainderSharing } from '../../engine/generators/multdiv';
 import { cancelSpeech, speak, speechAvailable } from '../tts';
 import { isStackable, StackedProblem } from './StackedProblem';
 import { HintVisualView } from './HintVisualView';
@@ -11,7 +12,9 @@ interface Props {
   entry?: { value: string; state: 'idle' | 'correct' | 'wrong' } | null;
 }
 
-export function ProblemView({ problem, readAloud, entry }: Props) {
+export function ProblemView({ problem: storedProblem, readAloud, entry }: Props) {
+  // Saved in-progress questions keep their numbers/answer, with corrected prose.
+  const problem = clarifyRemainderSharing(storedProblem);
   // Word problems are the ones that actually need reading aloud; short
   // equations do not, and auto-speaking "seven plus five" on every fluency
   // drill would be maddening.

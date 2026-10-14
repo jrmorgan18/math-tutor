@@ -7,6 +7,7 @@ import { Briefing } from './ui/screens/Briefing';
 import { Session } from './ui/screens/Session';
 import { Recap } from './ui/screens/Recap';
 import { Paddock } from './ui/screens/Paddock';
+import { Collection } from './ui/screens/Collection';
 import { Parent } from './ui/screens/Parent';
 import { Celebration } from './ui/components/Celebration';
 
@@ -42,6 +43,7 @@ export function App() {
       {screen === 'session' ? <Session /> : null}
       {screen === 'recap' ? <Recap /> : null}
       {screen === 'paddock' ? <Paddock /> : null}
+      {screen === 'collection' ? <Collection /> : null}
       {screen === 'parent' ? <Parent /> : null}
       <Celebration />
     </>

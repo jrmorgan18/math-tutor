@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { hasPlayAccess } from '../../play/paddock';
 import { useStore, DAILY_DNA_CAP } from '../../store/useStore';
 import {
   buildMissionChoices,
@@ -23,6 +25,13 @@ function dailyFactIndex(seed: string, count: number): number {
 }
 
 export function Home() {
+  const [day, setDay] = useState(todayKey());
+  useEffect(() => {
+    const timer = window.setInterval(() => setDay(todayKey()), 10_000);
+    const refresh = () => setDay(todayKey());
+    window.addEventListener('focus', refresh);
+    return () => { clearInterval(timer); window.removeEventListener('focus', refresh); };
+  }, []);
   const profile = useStore((s) => s.profile);
   const setScreen = useStore((s) => s.setScreen);
   const chooseMission = useStore((s) => s.chooseMission);
@@ -170,6 +179,12 @@ export function Home() {
 
       <Discoveries ids={profile.discoveries} labLevel={profile.labLevel} />
 
+      <section className="card paddock-entry" aria-label="Dinosaur playground">
+        <div className="row between"><h2>🌿 Paddock</h2><span className="pill">{hasPlayAccess(profile, day) ? 'Open today' : 'Locked today'}</span></div>
+        <p className="small dim">{hasPlayAccess(profile, day) ? 'Your dinosaurs are ready to play. Bring a ball, share a snack, take a photo.' : 'Finish today’s expedition to play with your dinosaurs.'}</p>
+        <button className="btn btn-primary btn-wide" disabled={!hasPlayAccess(profile, day)} onClick={() => setScreen('paddock')}>Enter the Paddock</button>
+      </section>
+
       {/* -------------------------------------------------- field notes */}
       {factDino ? (
         <div className="card">
@@ -187,8 +202,8 @@ export function Home() {
       <div className="spacer" />
 
       <div className="row" style={{ gap: 10, marginBottom: 14 }}>
-        <button className="btn grow" onClick={() => setScreen('paddock')}>
-          🦕 Paddock ({profile.hatched.length})
+        <button className="btn grow" onClick={() => setScreen('collection')}>
+          🦕 Collection ({profile.hatched.length})
         </button>
         <button className="btn" onClick={() => setScreen('parent')}>
           ⚙️

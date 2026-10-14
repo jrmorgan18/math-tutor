@@ -1362,3 +1362,47 @@ input[type='text'] {
 .colpad-box.active { outline: 3px solid var(--cyan); outline-offset: 3px; }
 
 .key-go:active { background: var(--amber); color: #1a1205; }
+
+/* The Paddock: local SVG world with controls outside the touch surface. */
+.paddock-app { max-width: 1100px; padding-bottom: 24px; }
+.paddock-heading { margin-bottom: 8px; }
+.paddock-heading p { margin: 0; }
+.paddock-entry { border-color: #56714b; }
+.habitat-shell { border: 2px solid #526849; border-radius: 22px; overflow: hidden; background: #1b3028; }
+.habitat { display: block; width: 100%; touch-action: none; cursor: crosshair; }
+.habitat-caption { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 12px 16px; }
+.habitat-resident { transition: transform .85s ease-in-out; cursor: grab; }
+.habitat [role=button]:focus-visible { outline: none; }
+.habitat [role=button]:focus-visible > rect, .habitat [role=button]:focus-visible > circle:first-child { stroke: #fffbd1; stroke-width: 4px; }
+.paddock-app button:focus-visible, .habitat:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+.happy { animation: paddock-happy 1s ease-in-out infinite alternate; }
+@keyframes paddock-happy { from { transform: rotate(-3deg) translateY(0); } to { transform: rotate(3deg) translateY(-5px); } }
+.paddock-notice { min-height: 26px; margin: 8px 4px 12px; color: #e7dca4; }
+.paddock-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 330px; align-items: start; gap: 14px; }
+.paddock-world { position: sticky; top: 12px; min-width: 0; }
+.paddock-controls { display: flex; flex-direction: column; }
+.toy-tray { order: -1; }
+.paddock-controls .card { padding: 12px; }
+.resident-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.resident-choice { flex: 1 1 110px; max-width: 180px; min-height: 100px; border: 2px solid var(--line); border-radius: 14px; background: var(--bg-card); padding: 6px; display: flex; align-items: center; flex-direction: column; }
+.resident-choice svg { width: 84px; height: 66px; }
+.resident-choice span { font-size: 13px; font-weight: 700; }
+.resident-choice small { font-size: 12px; color: var(--text-dim); }
+.paddock-controls .resident-choice { flex-basis: 90px; min-width: 0; }
+.resident-choice:disabled { opacity: .5; }
+.paddock-app .selected { border-color: #f0b429; background: #383321; box-shadow: 0 0 0 1px #f0b429; }
+.toy-options { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.toy-options .btn { padding: 0 8px; gap: 6px; font-size: 17px; flex: 1 1 80px; }
+.photo-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 16px; }
+.photo-thumb { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg-card); padding: 0; text-align: left; }
+.photo-thumb img { display: block; width: 100%; aspect-ratio: 5 / 3; }
+.photo-thumb span { display: block; padding: 10px; font-size: 14px; overflow-wrap: anywhere; }
+.paddock-photo-dialog { width: min(850px, 94vw); max-height: 92vh; overflow: auto; border: 1px solid var(--line); border-radius: 18px; background: var(--bg-raised); color: var(--text); padding: 22px; }
+.paddock-photo-dialog::backdrop { background: #000a; }
+.large-photo { width: 100%; display: block; border-radius: 12px; margin-bottom: 16px; }
+.paddock-photo-dialog input { width: 100%; min-height: 48px; margin: 8px 0; padding: 10px; font: inherit; color: var(--text); border: 1px solid var(--line); background: var(--bg); border-radius: 8px; user-select: text; }
+.photo-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.delete-photo-confirm { border: 1px solid var(--red); padding: 14px; border-radius: 12px; margin-top: 16px; }
+.delete-photo-confirm .btn { margin-right: 8px; }
+@media (max-width: 800px) { .paddock-workspace { display: block; } .paddock-world { position: static; } .resident-choice { flex-basis: 105px; } .paddock-heading .btn { padding: 0 14px; } }
+@media (prefers-reduced-motion: reduce) { .habitat-resident { transition: none; } .happy { animation: none; } .paddock-app .btn { transition: none; } }

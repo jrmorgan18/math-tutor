@@ -62,6 +62,33 @@ try {
     return problem.answer;
   }, { skillId, level, representation });
 
+  // Remainder instructions must be visible before solving, including after
+  // reloading an older saved session. Use a real 35 / 6 problem and its hints.
+  await setProblem('div-share', 4, { kind: 'numeric' });
+  assert.match(await page.locator('.problem-text').innerText(), /whole eggs.*Leave any extra eggs aside/);
+  await page.evaluate(async () => {
+    const { generate } = await import('/src/engine/generators/index.ts');
+    const { saveLearningCheckpoint } = await import('/src/store/db.ts');
+    let problem;
+    for (let seed = 1; seed <= 2048; seed++) {
+      const candidate = generate('div-share', 4, seed);
+      if (candidate.meta.operands[0] === 35 && candidate.meta.operands[1] === 6 && candidate.subPrompt.includes('each nest')) { problem = candidate; break; }
+    }
+    if (!problem) throw new Error('No 35 / 6 regression fixture found.');
+    problem = { ...problem, prompt: '35 eggs are shared equally between 6 nests.', subPrompt: 'How many eggs go in each nest?' };
+    const s = window.__lab.getState();
+    const session = { ...s.session, problem, plan:[{ slot:'working', skillId:'div-share', level:4, seed:problem.seed }], index:0 };
+    await saveLearningCheckpoint(s.profile, s.attempts, session);
+  });
+  await page.reload();
+  await page.waitForFunction(() => window.__lab?.getState().screen === 'session');
+  assert.match(await page.locator('.problem-text').innerText(), /Share 35 whole eggs between 6 nests/);
+  assert.match(await page.locator('.problem-text').innerText(), /using as many eggs as you can.*Leave any extra eggs aside/);
+  assert.equal(await page.locator('.problem-sub').innerText(), 'How many whole eggs can go in each nest?');
+  assert.equal(await page.evaluate(() => window.__lab.getState().session.problem.answer), '5');
+  await page.screenshot({ path:`${output}/remainder-sharing-portrait.png` });
+  console.log('New and resumed remainder questions explicitly keep eggs whole and set extras aside.');
+
   const expected = await setProblem('add-100', 3, { kind: 'columns', columns: 2, carry: true });
   await page.getByRole('button', { name: 'Got it', exact: true }).tap();
   const ones = expected.at(-1), tens = expected.at(-2);

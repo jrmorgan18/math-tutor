@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { generate, GENERATORS } from '../src/engine/generators';
 import { getSkill, SKILLS, topoSortedSkills } from '../src/engine/skills';
 import type { Problem } from '../src/engine/types';
+import { clarifyRemainderSharing } from '../src/engine/generators/multdiv';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { createElement } from 'react';
+import { ProblemView } from '../src/ui/components/ProblemView';
 
 const SEEDS = 400;
 
@@ -221,9 +225,44 @@ describe('difficulty tiers mean what they claim', () => {
       const [a, b] = p.meta!.operands as [number, number];
       expect(a % b, `${a}/${b}`).toBeGreaterThan(0);
       const answer = Number(p.answer);
-      // The question asks for either the quotient or the leftover.
-      expect([Math.floor(a / b), a % b]).toContain(answer);
+      // The wording must say that eggs stay whole and extras are left aside.
+      expect(p.prompt).toContain(`${a} whole eggs`);
+      expect(p.prompt).toContain('Leave any extra eggs aside.');
+      const asksRemainder = p.subPrompt === 'How many eggs are left over?';
+      if (!asksRemainder) expect(p.subPrompt).toBe('How many whole eggs can go in each nest?');
+      expect(answer).toBe(asksRemainder ? a % b : Math.floor(a / b));
     }
+  });
+
+  it('clarifies a saved 35-eggs/6-nests question without changing its math or state', () => {
+    const original: Problem = {
+      ...generate('div-share', 4, 1),
+      prompt: '35 eggs are shared equally between 6 nests.',
+      subPrompt: 'How many eggs go in each nest?',
+      answer: '5', meta: { operands: [35, 6], op: '÷' },
+    };
+    const before = structuredClone(original);
+    const fixed = clarifyRemainderSharing(original);
+    expect(fixed.prompt).toContain('35 whole eggs between 6 nests');
+    expect(fixed.prompt).toContain('Give each nest the same number, using as many eggs as you can. Leave any extra eggs aside.');
+    expect(fixed.subPrompt).toBe('How many whole eggs can go in each nest?');
+    expect(fixed.answer).toBe('5');
+    expect(fixed.meta).toBe(original.meta);
+    expect(fixed.hints).toBe(original.hints);
+    expect(original).toEqual(before);
+    expect(clarifyRemainderSharing(fixed)).toBe(fixed);
+    const rendered = renderToStaticMarkup(createElement(ProblemView, { problem: original, readAloud: false }));
+    expect(rendered).toContain('Leave any extra eggs aside.');
+    expect(rendered).not.toContain('are shared equally');
+  });
+
+  it('keeps exact division and other skills unchanged when displaying saved questions', () => {
+    for (const level of [1, 2, 3]) {
+      const p = generate('div-share', level, 3);
+      expect(clarifyRemainderSharing(p)).toBe(p);
+    }
+    const p = generate('word-1step', 4, 3);
+    expect(clarifyRemainderSharing(p)).toBe(p);
   });
 
   it('word problems never ask for a negative or fractional result', () => {

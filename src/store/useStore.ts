@@ -1,4 +1,5 @@
 import { conceptProficient } from '../engine/evidence';
+import type { PaddockState } from '../play/paddock';
 import { create } from 'zustand';
 import { generate } from '../engine/generators';
 import { generateBossProblem } from '../engine/generators/boss';
@@ -111,6 +112,7 @@ export type Screen =
   | 'session'
   | 'recap'
   | 'paddock'
+  | 'collection'
   | 'parent';
 
 export interface SessionRun {
@@ -189,6 +191,7 @@ interface Store {
   /** Whether a restorable snapshot exists, for showing the undo affordance. */
   backupInfo: () => Promise<{ at: number; reason: string; name: string } | null>;
   setScreen: (screen: Screen) => void;
+  savePaddock: (paddock: PaddockState) => Promise<void>;
   toggleSound: () => void;
   toggleReadAloud: () => void;
   setAvatar: (avatar: string) => void;
@@ -294,6 +297,20 @@ export const useStore = create<Store>((set, get) => ({
 
   setScreen(screen) {
     set({ screen });
+  },
+
+  async savePaddock(paddock) {
+    const { profile } = get();
+    if (!profile) return;
+    // Only this field changes; learning history and rewards never pass through play logic.
+    const next = { ...profile, paddock };
+    set({ profile: next });
+    try { await saveProfile(next); }
+    catch (error) {
+      const current = get().profile;
+      if (current?.paddock === paddock) set({ profile: { ...current, paddock: profile.paddock } });
+      throw error;
+    }
   },
 
   toggleSound() {

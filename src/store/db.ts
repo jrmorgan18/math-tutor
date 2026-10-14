@@ -2,6 +2,7 @@ import { del, get, set, setMany } from 'idb-keyval';
 import { propagateUnlocks, reconcileSkillStates } from '../engine/mastery';
 import { verifyLegacyEvidence } from '../engine/evidence';
 import type { Attempt, SkillId, SkillState } from '../engine/types';
+import { emptyPaddock, migratePaddock, type PaddockState } from '../play/paddock';
 
 /**
  * Persistence.
@@ -64,6 +65,8 @@ export interface Profile {
 
   soundOn: boolean;
   readAloud: boolean;
+  /** Local habitat and bounded scrapbook; included in safety backups and exports. */
+  paddock: PaddockState;
 }
 
 /**
@@ -103,7 +106,7 @@ const BACKUP_KEY = 'genesis-lab:backup';
 const ACTIVE_SESSION_KEY = 'genesis-lab:active-session';
 const ACTIVE_PLACEMENT_KEY = 'genesis-lab:active-placement';
 
-export const PROFILE_VERSION = 4;
+export const PROFILE_VERSION = 5;
 
 export function todayKey(now = new Date()): string {
   const y = now.getFullYear();
@@ -144,6 +147,7 @@ export function newProfile(
     postCapDay: null,
     soundOn: true,
     readAloud: true,
+    paddock: emptyPaddock(),
   };
 }
 
@@ -208,6 +212,7 @@ export function migrateProfile(raw: unknown, attempts?: Attempt[]): Profile | nu
     postCapDay: typeof p.postCapDay === 'string' ? p.postCapDay : null,
     soundOn: p.soundOn !== false,
     readAloud: p.readAloud !== false,
+    paddock: migratePaddock(p.paddock),
   };
 }
 

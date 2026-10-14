@@ -6,7 +6,7 @@ Runs locally in the browser; everything is stored on the device.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 162 tests
+npm test           # 181 tests
 npm run build      # static output in dist/
 ```
 
@@ -384,3 +384,67 @@ reasoning strand, and GitHub Pages deployment
 (the Vite `base` is still `'./'` — set it to `'/<repo-name>/'` when a repo
 exists). Column entry currently accepts the digits without asking him to state
 the carry itself, which is the obvious next turn of the screw.
+
+## Paddock playground
+
+Finish one math session today, then choose **Enter the Paddock** on Home.
+The existing Dinosaur Collection remains available from Home and the Paddock,
+including sequencing choices and factual notes. Daily access uses the existing
+local-date `lastSessionDay` completion record, so older learners who already
+finished today qualify immediately. Leaving and returning tomorrow requires a
+new completed session; an admitted visit has no timer or forced exit.
+
+Choose a hatched friend, then tap the grass to bring it in. Up to six distinct
+species can play together. Select and tap a new spot, drag with touch or mouse,
+or focus a friend/toy and use arrow keys. Keyboard users can select a tray item,
+focus the habitat, move the placement spot with arrow keys and press Enter.
+Choose Brush and tap a friend (or press Enter on a focused friend) to brush it.
+Food is replenished by placing it again. Moving or replacing the ball starts a
+new chase. Stegosaurus seeks shade; Pteranodon returns to the perch; the other
+friends wander gently. These are fictional play behaviors, separate from the
+collection's factual notes. All catalog species have play art and behavior.
+No needs decay while away, no chores and no DNA/proficiency changes occur.
+
+**Take photo** captures only the SVG landscape, dinosaurs and toys as a local
+800×480 JPEG. The scrapbook has thumbnails, a larger view, editable titles and
+a separate confirmation before deletion. It holds 12 photos, with a maximum
+180,000 encoded characters per photo. Full albums never automatically evict
+older pictures; storage failures roll back the attempted save and show a message.
+Audio is omitted, so play works silently with every existing sound preference.
+Reduced-motion preferences disable transitions and happy wiggles.
+
+### Storage and backup treatment
+
+Profile schema 5 adds `paddock` alongside existing learning fields. Old profiles
+receive an empty habitat; DNA, hatch records, discoveries, attempts, placement
+completion and session history keep their existing treatment. Runtime movement
+is only simulated while the habitat is visible. Positions, toys and photos
+persist in IndexedDB; reload stops pending actions and greets happy friends.
+The app currently has one active profile. Paddock data lives inside that profile,
+so replacement/reset does not attach another learner's photos to the new profile.
+
+Safety snapshots, Settings Undo, JSON exports and imports **include the habitat
+and scrapbook**. Normal maximum photo overhead is about 2.2 MB of encoded image
+data per export, plus JSON framing and existing learning history. Imported albums
+are not silently truncated on load. There are no uploads, automatic downloads,
+extra storage keys or network assets. The existing reset/import confirmation
+and rolling pre-change backup also protect the new profile fields.
+
+### Paddock verification
+
+`tests/paddock.test.ts` covers daily completed-session admission (including a
+full run at the DNA cap), hatched-only availability, all catalog species, toy
+responses, six-friend limits, untouched learning state, old-profile migration,
+export/import/reset/undo, quota failure rollback and scrapbook limits/deletion.
+The persistence tests use an in-memory IndexedDB API substitute; browser checks
+exercise real IndexedDB in a fresh temporary Chromium profile.
+
+Run `node tests/paddock-tablet-check.mjs` against Vite (default port 5176), using
+the same Playwright environment variables as `tests/tablet-check.mjs`.
+`GENESIS_URL` selects another local port. Checks cover 768×1024 portrait and
+1024×768 landscape, session completion, collection details, repeated toys,
+real touch drag/cancel, tap placement, keyboard interaction, reduced motion,
+photo capture/title/view/deletion, reload, exports and daily relocking.
+Screenshots are saved in ignored `.qa/` (or `GENESIS_QA_OUTPUT`).
+Physical iPad/Safari verification remains a device check. Publishing uses the
+existing GitHub Pages workflow on main. DNA Lab is a separate future playground.

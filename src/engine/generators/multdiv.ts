@@ -2,6 +2,23 @@ import { numericChoices, Rng } from '../rng';
 import { array, arrayIfSmall, barmodel, groups, groupsIfSmall, h, numberline } from '../hintBuilders';
 import type { Problem } from '../types';
 
+function remainderSharingWording(total: number, nests: number, askRemainder: boolean) {
+  return {
+    prompt: `Share ${total} whole eggs between ${nests} nests. Give each nest the same number, using as many eggs as you can. Leave any extra eggs aside.`,
+    subPrompt: askRemainder ? 'How many eggs are left over?' : 'How many whole eggs can go in each nest?',
+  };
+}
+
+/** Clarify the whole-egg rule, including questions already saved in a session. */
+export function clarifyRemainderSharing(problem: Problem): Problem {
+  if (problem.skillId !== 'div-share' || problem.level !== 4 || problem.meta?.op !== '÷') return problem;
+  const [total, nests] = problem.meta.operands ?? [];
+  if (!Number.isInteger(total) || !Number.isInteger(nests) || !total || !nests || nests <= 1 || total % nests === 0) return problem;
+  const { prompt, subPrompt } = remainderSharingWording(total, nests, !!problem.subPrompt?.includes('left over'));
+  if (problem.prompt === prompt && problem.subPrompt === subPrompt) return problem;
+  return { ...problem, prompt, subPrompt };
+}
+
 /**
  * Multiplication as a concept, before any facts get memorised: equal groups,
  * arrays, and recognising repeated addition. Getting this in first is what
@@ -238,8 +255,7 @@ export function divShare(level: number, seed: number): Problem {
   const askRemainder = rng.bool();
   return {
     ...base,
-    prompt: `${total} eggs are shared equally between ${divisor} nests.`,
-    subPrompt: askRemainder ? 'How many eggs are left over?' : 'How many eggs go in each nest?',
+    ...remainderSharingWording(total, divisor, askRemainder),
     answer: String(askRemainder ? remainder : quotient),
     representation: { kind: 'numeric' },
     hints: [
