@@ -22,7 +22,7 @@ try {
     const { newProfile }=await import('/src/store/db.ts'); const { initialSkillStates }=await import('/src/engine/mastery.ts');
     const { setMany }=await import('/node_modules/idb-keyval/dist/index.js');
     const p=newProfile('DNA synthetic QA',initialSkillStates()); p.version=5; delete p.dnaLab; p.placementDone=true; p.soundOn=false;p.readAloud=false;
-    p.hatched=['compsognathus','stegosaurus','pteranodon'];p.discoveries=['fact-raptor-tail'];p.dna=27;p.totalDna=800;p.labLevel=99;
+    p.hatched=['compsognathus','stegosaurus','pteranodon','ankylosaurus','triceratops'];p.discoveries=['fact-raptor-tail'];p.dna=27;p.totalDna=800;p.labLevel=99;
     const { todayKey }=await import('/src/store/db.ts');p.dailyDna=150;p.dailyDnaDay=todayKey();
     await setMany([['genesis-lab:profile',p],['genesis-lab:attempts',[]]]);
   });
@@ -38,7 +38,7 @@ try {
   await page.getByRole('button',{name:'Back to the lab'}).tap();
   const before=await learning();
   await page.getByRole('button',{name:'Enter DNA Playground'}).tap();
-  assert.equal(await page.locator('.dna-sample').count(),3); assert.equal(await page.locator('.dna-sample').filter({hasText:'Velociraptor'}).count(),0);
+  assert.equal(await page.locator('.dna-sample').count(),5); assert.equal(await page.locator('.dna-sample').filter({hasText:'Velociraptor'}).count(),0);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth),true);
   await page.screenshot({path:output+'/bench-portrait.png',fullPage:true});
   // Original, then one variable; baseline and current cards remain visible.
@@ -97,6 +97,57 @@ try {
   await dialog.getByRole('button',{name:'Yes, delete creation'}).tap();await dialog.waitFor({state:'hidden'});assert.equal((await lab()).creations.length,1);
   assert.deepEqual(await learning(),before);
   await page.screenshot({path:output+'/notebook-landscape.png',fullPage:true});
+  // Create a real two-parent hybrid, then hand its complete design to Battle.
+  await page.locator('.dna-sample').filter({hasText:'Stegosaurus'}).tap();
+  await page.getByRole('button',{name:'Create hybrid',exact:true}).tap();
+  await page.getByRole('combobox',{name:'Partner dinosaur',exact:true}).selectOption('ankylosaurus');
+  assert.equal(await page.getByRole('combobox',{name:'Partner dinosaur',exact:true}).locator('option[value="stegosaurus"]').count(),0);
+  await page.getByRole('combobox',{name:'head DNA',exact:true}).selectOption('base');
+  assert.equal(await page.locator('.dna-preview-pair [data-hybrid-tail="ankylosaurus"]').count(),2);
+  assert.match(await page.locator('.dna-inheritance').innerText(),/Armored back/);
+  assert.match(await page.locator('.dna-inheritance').innerText(),/Club tail/);
+  assert.equal(await page.getByRole('button',{name:'Save creation',exact:true}).isDisabled(),true);
+  await run(); await page.getByLabel('Creation name').fill('Clubback');
+  await page.getByRole('button',{name:'Save creation',exact:true}).tap();await saved('Clubback').waitFor();
+  const hybridId=(await lab()).creations.find(c=>c.name==='Clubback').id;
+  const hybridDownloadPromise=page.waitForEvent('download');await saved('Clubback').getByRole('button',{name:'Export hybrid',exact:true}).tap();
+  const hybridDownload=await hybridDownloadPromise;await hybridDownload.saveAs(output+'/clubback.json');
+  const hybridData=JSON.parse(await readFile(output+'/clubback.json','utf8'));
+  assert.equal(hybridData.version,2);assert.equal(hybridData.creation.hybrid.donorSpeciesId,'ankylosaurus');
+  assert.equal(hybridData.battleBlueprint.anatomy.head,'stegosaurus');assert.equal(hybridData.battleBlueprint.anatomy.tail,'ankylosaurus');
+  assert.equal(Object.values(hybridData.battleBlueprint.stats).reduce((a,b)=>a+b,0),30);
+  assert.equal(await page.evaluate(async d=>(await import('/src/play/dnaLab.ts')).validateExport(d),hybridData),true);
+  const promptDownloadPromise=page.waitForEvent('download');await saved('Clubback').getByRole('button',{name:'Export Battle prompt',exact:true}).tap();
+  const promptDownload=await promptDownloadPromise;await promptDownload.saveAs(output+'/clubback-battle-prompt.txt');
+  const prompt=await readFile(output+'/clubback-battle-prompt.txt','utf8');
+  assert.match(prompt,/Dinosaur_Battle/);assert.match(prompt,/src\/core\/types.ts/);assert.match(prompt,/Club tail/);
+  assert.deepEqual(JSON.parse(prompt.split('Full portable design:\n')[1]),hybridData);
+  assert.ok(!prompt.includes('DNA synthetic QA'));
+  await page.setViewportSize({width:768,height:1024});await page.getByRole('region',{name:'Hybrid creator'}).scrollIntoViewIfNeeded();
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await page.screenshot({path:output+'/hybrid-portrait.png',fullPage:true});
+  await page.reload();await page.getByRole('button',{name:'Enter DNA Playground'}).tap();
+  await saved('Clubback').getByRole('button',{name:'Reopen Clubback',exact:true}).tap();
+  assert.equal(await page.getByRole('button',{name:'Create hybrid',exact:true}).getAttribute('aria-pressed'),'true');
+  assert.equal(await page.getByRole('combobox',{name:'Partner dinosaur',exact:true}).inputValue(),'ankylosaurus');
+  assert.equal(await page.getByRole('combobox',{name:'head DNA',exact:true}).inputValue(),'base');
+  assert.equal(await page.getByRole('combobox',{name:'tail DNA',exact:true}).inputValue(),'donor');
+  // Switching inheritance invalidates the last test; a new run is required.
+  await page.getByRole('combobox',{name:'head DNA',exact:true}).selectOption('donor');
+  assert.equal(await page.getByRole('button',{name:'Save changes',exact:true}).isDisabled(),true);
+  await run();await page.getByRole('button',{name:'Save changes',exact:true}).tap();
+  assert.equal((await lab()).creations.find(c=>c.id===hybridId).hybrid.head,'donor');
+  await saved('Clubback').getByRole('button',{name:'Duplicate Clubback',exact:true}).tap();await saved('Clubback copy').waitFor();
+  await saved('Clubback copy').getByRole('button',{name:'Delete Clubback copy',exact:true}).tap();
+  await page.getByRole('dialog').getByRole('button',{name:'Keep creation',exact:true}).tap();assert.equal((await lab()).creations.length,3);
+  await saved('Clubback copy').getByRole('button',{name:'Delete Clubback copy',exact:true}).tap();
+  await page.getByRole('dialog').getByRole('button',{name:'Yes, delete creation',exact:true}).tap();
+  await page.getByRole('dialog').waitFor({state:'hidden'});assert.equal((await lab()).creations.length,2);
+  assert.deepEqual(await learning(),before);
+  await page.setViewportSize({width:1024,height:768});await page.getByRole('region',{name:'Hybrid creator'}).scrollIntoViewIfNeeded();
+  await page.screenshot({path:output+'/hybrid-landscape.png',fullPage:true});
+  await page.getByRole('button',{name:'Single sample',exact:true}).tap();
+  assert.equal(await page.getByRole('combobox',{name:'Partner dinosaur',exact:true}).count(),0);
   // Shared art and existing navigation still work.
   await page.getByRole('button',{name:'Collection',exact:true}).tap();await page.getByRole('button',{name:'Back',exact:false}).tap();
   await page.getByRole('button',{name:'Enter the Paddock'}).tap();assert.equal(await page.locator('.habitat').count(),1);
@@ -112,9 +163,9 @@ try {
   await page.evaluate(async()=>{const {saveProfile}=await import('/src/store/db.ts');const p={...window.__lab.getState().profile,lastSessionDay:'2000-01-01'};window.__lab.setState({profile:p});await saveProfile(p);});
   assert.equal(await page.locator('.dna-bench').count(),1); // admitted visit lasts
   await page.getByRole('button',{name:'Return to lab'}).tap();assert.equal(await page.getByRole('button',{name:'Enter DNA Playground'}).isDisabled(),true);
-  assert.equal((await lab()).creations.length,1);
+  assert.equal((await lab()).creations.length,2);
   await page.reload(); assert.equal(await page.getByRole('button',{name:'Enter DNA Playground'}).isDisabled(),true);
   assert.deepEqual(errors,[]);
-  console.log('DNA tablet checks passed: daily gate, actual capped session completion, earned samples, touch and keyboard sliders, both experiments, stable/wobble/tumble, comparisons, predictions, save/reopen/edit/duplicate/delete, quota retry, JSON download/validation, reload, reduced motion, unchanged learning, collection/Paddock/parent navigation, empty samples and day relocking.');
+  console.log('DNA tablet checks passed: daily gate, experiments and legacy exports, hybrid parents/parts/art, design attributes, save/reopen/edit/duplicate/delete, JSON + self-contained Battle prompt downloads, reload, reduced motion, quota retry, unchanged learning and existing navigation.');
 } catch(e) {await page.screenshot({path:output+'/failure.png',fullPage:true});throw e;}
 finally {await context.close();await browser.close();}

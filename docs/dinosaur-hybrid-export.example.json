@@ -1,0 +1,117 @@
+{
+  "schema": "genesis-lab/dinosaur",
+  "version": 2,
+  "fictionalLabCreation": true,
+  "creation": {
+    "id": "synthetic-armored-stego",
+    "name": "Armored Stego",
+    "speciesId": "stegosaurus",
+    "modelVersion": "genesis-hybrid-1",
+    "traits": {
+      "tail": 1,
+      "legs": 1,
+      "mass": 1
+    },
+    "appearance": {
+      "color": "sample",
+      "pattern": "plain"
+    },
+    "hybrid": {
+      "donorSpeciesId": "ankylosaurus",
+      "head": "donor",
+      "back": "donor",
+      "tail": "donor"
+    },
+    "runs": [
+      {
+        "speciesId": "stegosaurus",
+        "traits": {
+          "tail": 1,
+          "legs": 1,
+          "mass": 1
+        },
+        "appearance": {
+          "color": "sample",
+          "pattern": "plain"
+        },
+        "hybrid": {
+          "donorSpeciesId": "ankylosaurus",
+          "head": "donor",
+          "back": "donor",
+          "tail": "donor"
+        },
+        "conditions": {
+          "experiment": "dash",
+          "track": "smooth",
+          "turn": "gentle"
+        },
+        "seed": 2718,
+        "modelVersion": "genesis-hybrid-1",
+        "result": {
+          "seconds": 10,
+          "cleared": 0,
+          "stability": "stable",
+          "explanation": "Longer legs speed up the run; extra mass and tail length slow it down."
+        }
+      }
+    ]
+  },
+  "battleBlueprint": {
+    "game": "Dinosaur_Battle",
+    "status": "design-reference",
+    "parents": [
+      {
+        "speciesId": "stegosaurus",
+        "name": "Stegosaurus"
+      },
+      {
+        "speciesId": "ankylosaurus",
+        "name": "Ankylosaurus"
+      }
+    ],
+    "anatomy": {
+      "body": "stegosaurus",
+      "head": "ankylosaurus",
+      "back": "ankylosaurus",
+      "tail": "ankylosaurus"
+    },
+    "features": [
+      {
+        "part": "head",
+        "sourceSpeciesId": "ankylosaurus",
+        "description": "Rounded snout"
+      },
+      {
+        "part": "back",
+        "sourceSpeciesId": "ankylosaurus",
+        "description": "Armored back"
+      },
+      {
+        "part": "tail",
+        "sourceSpeciesId": "ankylosaurus",
+        "description": "Club tail"
+      }
+    ],
+    "colors": {
+      "body": "#76a1c1",
+      "accent": "#8d99ae",
+      "pattern": "plain"
+    },
+    "stats": {
+      "power": 5,
+      "armor": 7,
+      "speed": 4,
+      "agility": 4,
+      "stamina": 4,
+      "reach": 6
+    },
+    "statBudget": {
+      "min": 1,
+      "max": 9,
+      "total": 30
+    },
+    "suggestedBaseRosterId": "stegosaurus",
+    "unresolvedSpeciesIds": [],
+    "implementationRequired": true
+  }
+}

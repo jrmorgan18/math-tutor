@@ -46,8 +46,86 @@ Export dinosaur downloads one standalone JSON object, with no profile or learnin
 4. Add a separate adapter later. Start from the roster's balanced base definition. Convert bounded dimensionless offsets into small, capped tradeoffs (e.g. mobility versus recovery or reach versus turning), with a fixed power budget and tests against baseline matchups. Do not directly turn lab seconds into combat speed, body mass into health, or hurdle clearance into damage. Cosmetic changes may map to visual colors/patterns. Use existing renderer/animation registry conventions rather than external assets.
 5. Keep imported creations separate from earned roster progression. Retain creation ID for deduplication; sanitize display names; render text as text. Explicitly choose behavior for unresolved species. Verify gameplay balance before calling an import compatible.
 
-No battle files were edited. Egg incubation, hybrids, direct transfer and cross-playground rewards remain future work. Extend model versions explicitly, keep old results interpretable, and keep admission/economy independent of playground features.
+No battle files were edited. Egg incubation, direct transfer and cross-playground rewards remain future work. Hybrid creation and the v2 handoff are described below. Extend model versions explicitly, keep old results interpretable, and keep admission/economy independent of playground features.
 
 ## Verification
 
 npm test and npm run build. Tablet loop: tests/dna-lab-tablet-check.mjs; environment variables follow the existing paddock tablet check (PLAYWRIGHT_PACKAGE, GENESIS_URL, GENESIS_QA_OUTPUT, GENESIS_BROWSER_EXECUTABLE or GENESIS_BROWSER_CHANNEL). Run against local Vite only, using an isolated browser context and synthetic IndexedDB data.
+
+## Hybrid creator (export v2)
+
+Choose **Create hybrid** after hatching at least two different species. The sample
+rack supplies the body; **Partner dinosaur** supplies a second earned sample.
+Choose which parent supplies the head, back and tail. At least one feature must
+come from the partner. Back plates, armor, sails, wings, horned/beaked/toothy heads,
+and club/spiked tails visibly combine in the shared SVG preview and chamber.
+Original sample color blends the parents' catalog colors; other colors and patterns
+remain selectable. No sample is consumed and hybrids remain separate notebook
+creations, never new hatched species or math rewards.
+
+Run the hybrid, name it, then Save creation. Existing reopen/edit/duplicate/delete
+and storage limits apply to both kinds of creation. Changing parentage or inherited
+parts clears the draft run history and requires another test before saving. The
+old saved entry is retained until Save succeeds. Reset to original resets the
+trait multipliers/cosmetics while retaining the currently chosen hybrid genome.
+
+Profile schema 7 preserves every valid v6 single-sample creation and adds optional
+hybrid fields. The existing pre-migration snapshot protects the prior profile.
+Hybrid data is included in profile backup/import/undo with the same notebook;
+DNA, collected dinosaurs, attempt history, session completion and learning state
+are untouched. Old single-sample results and v1 exports keep their original model
+and format, including the checked-in v1 example.
+
+### Hybrid model and lineage
+
+Hybrid Setup adds `hybrid: { donorSpeciesId, head, back, tail }`. Each part value
+is `base` or `donor`; the body always uses creation.speciesId. Parents must be
+different known catalog species and both must be hatched to save. This is a
+fictional parts recipe, not biological DNA percentages. Model `genesis-hybrid-1`
+uses the existing trait/track formulas. Its baseline pace averages parent paces
+by the four parts (body/head/back/tail). Each selected donor part supplies one
+quarter of that fictional pace. Baseline comparison uses the same genome, course
+and default multipliers, so changing a slider remains a controlled comparison.
+Runs retain their genome, seed, version, conditions and computed result. Runtime
+validation checks all results, the latest setup and consistent parentage.
+
+### Exports for Dinosaur Battle
+
+Saved hybrids have two explicit download actions:
+
+- **Export hybrid**: standalone JSON with schema `genesis-lab/dinosaur`, version
+  `2`, the full creation/run records and a derived `battleBlueprint`.
+- **Export Battle prompt**: a self-contained text prompt with the same full JSON,
+  ready to paste into the Dinosaur_Battle project. It references the inspected
+  `src/core/types.ts`, `src/data/roster.ts`, fighter definitions and validation.
+
+The blueprint includes both parent IDs/names; body/head/back/tail source IDs;
+feature descriptions; resolved body/accent hex colors and pattern; and power,
+armor, speed, agility, stamina and reach design attributes. Each attribute is an
+integer from 1 to 9 and their total is always 30. Mass, legs, tail and inherited
+features affect the allocation, so a hybrid has tradeoffs rather than every
+attribute being strongest. These are design ratings, **not** Battle damage,
+energy, dimensions, movement speed, gravity or move-frame timings.
+
+The roster reference uses only exact shared species IDs. If neither parent exists
+in Battle, suggestedBaseRosterId is `custom`; unresolvedSpeciesIds lists the
+parents needing art or explicit mapping. No species is silently substituted.
+`implementationRequired: true` and status `design-reference` make clear that this
+is a fighter build brief. The prompt asks the Battle agent to implement a distinct
+fighter and inherited silhouette, tune quick/heavy/special moves and hitboxes,
+validate the definition, and test matchups while preserving existing fighters.
+This feature does not modify Dinosaur_Battle or add an importer to it.
+
+Contract files:
+
+- `dinosaur-hybrid-export.schema.json`: strict JSON Schema v2.
+- `dinosaur-hybrid-export.example.json`: synthetic Armored Stego design.
+- `dinosaur-hybrid-build-prompt.example.txt`: matching self-contained build prompt.
+- `node scripts/validate-dinosaur-export.mjs <file.json>` checks v1 or v2 shape,
+  with the same 100 KB input limit. `validateExport` additionally recomputes model
+  results and the entire blueprint, rejecting tampered or hidden fields. Object
+  key ordering does not affect validation.
+
+JSON and prompt exports whitelist creation data, with no learner/profile, math
+DNA, attempt history, storage keys, credentials, executable content or network
+assets. Creation names are user text; use a nonpersonal name when sharing.

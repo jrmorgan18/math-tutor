@@ -1,12 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DINOSAURS } from '../src/content/dinosaurs';
 import { initialSkillStates } from '../src/engine/mastery';
-import { boundTraits, changes, defaultConditions, deleteCreation, emptyLab, earnedSamples, exportDinosaur, FIXED_SEED, MAX_CREATIONS, MAX_RUNS, migrateLab, MODEL_VERSION, originalSetup, putCreation, simulate, validateExport, type Creation } from '../src/play/dnaLab';
+import { battleBuildPrompt, boundTraits, changes, defaultConditions, deleteCreation, emptyLab, earnedSamples, exportDinosaur, FIXED_SEED, MAX_CREATIONS, MAX_RUNS, migrateLab, MODEL_VERSION, originalSetup, putCreation, simulate, validateExport, validCreation, type Creation } from '../src/play/dnaLab';
+import { battleStats, BATTLE_STATS, buildBattleBlueprint, featureFor, hybridPace, HYBRID_MODEL_VERSION, newHybrid, partSources, sampleColor, validHybrid } from '../src/play/hybrids';
 import { hasPlayAccess } from '../src/play/paddock';
 import { exportAll, importAll, loadAttempts, loadProfile, newProfile, saveLearningCheckpoint, todayKey } from '../src/store/db';
 import { useStore } from '../src/store/useStore';
 import example from '../docs/dinosaur-export.example.json';
 import schema from '../docs/dinosaur-export.schema.json';
+import hybridExample from '../docs/dinosaur-hybrid-export.example.json';
+import hybridSchema from '../docs/dinosaur-hybrid-export.schema.json';
+import { execFileSync } from 'node:child_process';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { createElement } from 'react';
+import { DinosaurArt } from '../src/ui/components/HabitatArt';
 const disk = vi.hoisted(() => ({ records: new Map<string, unknown>(), fail: false }));
 vi.mock('idb-keyval', () => ({
   get: async (key: string) => structuredClone(disk.records.get(key)),
@@ -129,5 +136,127 @@ describe('portable export contract', () => {
     expect(validateExport({ ...p, profile:profile() })).toBe(false);
     for (const patch of [{speciesId:'unknown'},{id:'../unsafe'},{traits:{tail:99,legs:1,mass:1}},{traits:{tail:1.2,legs:1,mass:1}},{appearance:{color:'red',pattern:'plain'}}]) expect(validateExport({ ...p,creation:{ ...p.creation,...patch } })).toBe(false);
     const bad=structuredClone(p); Object.assign(bad.creation.runs[0]!,{script:'evil'}); expect(validateExport(bad)).toBe(false);
+  });
+});
+
+const hybridCreation = (id = 'hybrid-1'): Creation => {
+  const setup = { ...originalSetup(), hybrid:newHybrid('ankylosaurus') };
+  return { id, name:'Armored Stego', speciesId:'stegosaurus', ...setup, modelVersion:HYBRID_MODEL_VERSION, runs:[simulate('stegosaurus',setup,defaultConditions())] };
+};
+describe('earned hybrid creation and compatibility', () => {
+  it('requires two different hatched parents and at least one inherited partner feature', () => {
+    const c = hybridCreation();
+    expect(() => putCreation(emptyLab(),['stegosaurus'],c)).toThrow(/parents/);
+    expect(() => putCreation(emptyLab(),['ankylosaurus'],c)).toThrow(/earned/);
+    expect(putCreation(emptyLab(),['stegosaurus','ankylosaurus'],c).creations).toHaveLength(1);
+    for (const patch of [{donorSpeciesId:'stegosaurus'},{donorSpeciesId:'unknown'},{head:'invalid'},{head:'base',back:'base',tail:'base'},{extra:'private'}]) {
+      const h = { ...c.hybrid!, ...patch };
+      expect(validHybrid(c.speciesId,h)).toBe(false);
+      expect(() => simulate(c.speciesId,{ ...c,hybrid:h as never },defaultConditions())).toThrow();
+    }
+  });
+  it('supports every pair of catalog parents with deterministic bounded results and attributes', () => {
+    for (const base of DINOSAURS) for (const donor of DINOSAURS.filter(d => d.id !== base.id)) {
+      const setup = { ...originalSetup(), hybrid:newHybrid(donor.id) };
+      const run = simulate(base.id,setup,defaultConditions());
+      expect(run).toEqual(simulate(base.id,setup,defaultConditions()));
+      expect(run.modelVersion).toBe(HYBRID_MODEL_VERSION);
+      expect(run.result.seconds).toBeGreaterThan(0);
+      const c: Creation = { id:'pair',name:'Pair',speciesId:base.id,...setup,modelVersion:HYBRID_MODEL_VERSION,runs:[run] };
+      expect(validCreation(c)).toBe(true); expect(validateExport(exportDinosaur(c))).toBe(true);
+      const stats = battleStats(base.id,setup);
+      expect(Object.values(stats).reduce((a,b)=>a+b,0)).toBe(30);
+      for (const key of BATTLE_STATS) { expect(Number.isInteger(stats[key])).toBe(true); expect(stats[key]).toBeGreaterThanOrEqual(1); expect(stats[key]).toBeLessThanOrEqual(9); }
+    }
+  });
+  it('records the selected sources and makes inheritance affect the visible silhouette', () => {
+    const c=hybridCreation(); c.hybrid={...c.hybrid!,head:'base'};
+    expect(partSources(c.speciesId,c.hybrid)).toEqual({body:'stegosaurus',head:'stegosaurus',back:'ankylosaurus',tail:'ankylosaurus'});
+    expect(featureFor('tail','ankylosaurus')).toBe('Club tail');
+    const output=renderToStaticMarkup(createElement(DinosaurArt,{id:c.speciesId,setup:c}));
+    expect(output).toContain('data-hybrid-back="ankylosaurus"'); expect(output).toContain('data-hybrid-tail="ankylosaurus"');
+    expect(output).toContain('cx="-72"'); // Actual club-tail art, beyond metadata.
+    expect(sampleColor('stegosaurus',c.hybrid)).not.toBe(sampleColor('stegosaurus'));
+  });
+  it('uses inherited parts to mix baseline pace while preserving every v1 result', () => {
+    const setup={...originalSetup(),hybrid:newHybrid('compsognathus')};
+    expect(hybridPace('stegosaurus',setup.hybrid)).toBe(7.75);
+    expect(hybridPace('stegosaurus',{...setup.hybrid,head:'base',back:'base'})).toBe(9.25);
+    expect(simulate('stegosaurus',setup,defaultConditions()).result.seconds).toBe(7.75);
+    expect(exportDinosaur(example.creation as Creation)).toEqual(example);
+    const changed={...setup,hybrid:{...setup.hybrid,tail:'base' as const}};
+    expect(changes(setup,changed)).toEqual(['tail DNA']);
+  });
+  it('preserves old notebook entries, new hybrid histories and unrelated learning across migration/export/import', async () => {
+    const p=profile(); p.version=6; p.hatched.push('stegosaurus','ankylosaurus');
+    p.dnaLab=putCreation(emptyLab(),p.hatched,creation());
+    const attempts=[{id:'retained-hybrid-attempt'}] as never[];
+    await saveLearningCheckpoint(p,attempts,{unfinished:true}); useStore.setState({profile:p,attempts});
+    const next=putCreation(p.dnaLab,p.hatched,hybridCreation()); await useStore.getState().saveLab(next);
+    const {dnaLab:_before,...before}=p; const {dnaLab:_after,...after}=useStore.getState().profile!;
+    expect(after).toEqual(before); expect(await loadAttempts()).toEqual(attempts);
+    expect(disk.records.get('genesis-lab:active-session')).toEqual({unfinished:true});
+    expect((await loadProfile())!.dnaLab.creations).toEqual(next.creations);
+    const backup=await exportAll(); await importAll(backup);
+    expect((await loadProfile())!.dnaLab.creations).toEqual(next.creations);
+    expect(migrateLab(next)).toEqual(next);
+    expect(next.creations[0]).toEqual(creation());
+  });
+  it('rejects stale morphology, mixed-parent histories and fabricated hybrid model results', () => {
+    const c=hybridCreation();
+    for (const mutate of [
+      (x:Creation)=>{ x.hybrid!.head='base'; },
+      (x:Creation)=>{ x.runs[0]!.hybrid!.donorSpeciesId='trex'; },
+      (x:Creation)=>{ x.runs[0]!.result.seconds=0; },
+      (x:Creation)=>{ x.modelVersion=MODEL_VERSION; },
+    ]) { const bad=structuredClone(c);mutate(bad);expect(validCreation(bad)).toBe(false); }
+  });
+  it('retains saved creations unchanged when a hybrid save runs out of storage', async () => {
+    const p=profile();p.hatched.push('stegosaurus','ankylosaurus');p.dnaLab=putCreation(emptyLab(),p.hatched,creation());
+    await saveLearningCheckpoint(p,[],null);useStore.setState({profile:p});disk.fail=true;
+    await expect(useStore.getState().saveLab(putCreation(p.dnaLab,p.hatched,hybridCreation()))).rejects.toThrow();
+    expect(useStore.getState().profile).toEqual(p);expect((await loadProfile())!.dnaLab).toEqual(p.dnaLab);
+  });
+});
+
+describe('hybrid Battle handoff', () => {
+  it('keeps v1 exports and validates the standalone v2 schema and synthetic example', () => {
+    expect(validateExport(example)).toBe(true);expect(validateExport(hybridExample)).toBe(true);
+    expect(hybridSchema.properties.version.const).toBe(2);
+    expect(hybridSchema.properties.creation.properties.modelVersion.const).toBe(HYBRID_MODEL_VERSION);
+    for(const file of ['docs/dinosaur-export.example.json','docs/dinosaur-hybrid-export.example.json']) expect(execFileSync(process.execPath,['scripts/validate-dinosaur-export.mjs',file],{encoding:'utf8'})).toContain('Valid Genesis Lab export shape');
+  });
+  it('exports reproducible parentage, anatomy, colors, bounded stats and honest Battle roster references', () => {
+    const c=hybridCreation(),data=exportDinosaur(c);
+    expect(data.version).toBe(2);expect(data.battleBlueprint).toEqual(buildBattleBlueprint(c.speciesId,c));
+    expect(data.battleBlueprint!.anatomy.tail).toBe('ankylosaurus');
+    expect(data.battleBlueprint!.suggestedBaseRosterId).toBe('stegosaurus');
+    expect(data.battleBlueprint!.unresolvedSpeciesIds).toEqual([]);
+    expect(data.battleBlueprint!.implementationRequired).toBe(true);
+    const setup={...originalSetup(),hybrid:newHybrid('pteranodon')};
+    const bp=buildBattleBlueprint('compsognathus',setup);
+    expect(bp.suggestedBaseRosterId).toBe('custom');expect(bp.unresolvedSpeciesIds).toEqual(['compsognathus','pteranodon']);
+  });
+  it('rejects tampered Battle attributes, unrecognized fields and incompatible versions', () => {
+    const data=exportDinosaur(hybridCreation());
+    for(const mutate of [
+      (x:typeof data)=>{x.battleBlueprint!.stats.power=9;},
+      (x:typeof data)=>{x.battleBlueprint!.anatomy.tail='trex';},
+      (x:typeof data)=>{x.battleBlueprint!.colors.body='#ffffff';},
+      (x:typeof data)=>{Object.assign(x.battleBlueprint!,{private:'hidden'});},
+      (x:typeof data)=>{x.version=1;},
+    ]) {const bad=structuredClone(data);mutate(bad);expect(validateExport(bad)).toBe(false);}
+  });
+  it('provides a self-contained build prompt without profile, learning or executable data', () => {
+    const c=Object.assign(hybridCreation(),{profile:profile(),attempts:[1]});
+    const prompt=battleBuildPrompt(c);
+    expect(prompt).toContain('src/core/types.ts');expect(prompt).toContain('src/data/roster.ts');
+    expect(prompt).toContain('quick/heavy/special');expect(prompt).toContain('not battle damage');
+    expect(prompt).toContain('Club tail');expect(prompt).toContain('"version": 2');
+    for(const privateValue of ['Synthetic test learner','skillStates','totalDna','genesis-lab:profile']) expect(prompt).not.toContain(privateValue);
+    expect(()=>battleBuildPrompt(creation())).toThrow(/hybrid/);
+    const reordered=JSON.parse(JSON.stringify(exportDinosaur(c)));
+    reordered.battleBlueprint={...reordered.battleBlueprint,colors:{pattern:reordered.battleBlueprint.colors.pattern,accent:reordered.battleBlueprint.colors.accent,body:reordered.battleBlueprint.colors.body}};
+    expect(validateExport(reordered)).toBe(true);
   });
 });

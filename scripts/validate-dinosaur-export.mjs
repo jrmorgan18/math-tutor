@@ -1,8 +1,9 @@
-// Dependency-free validation of the JSON Schema subset used by this v1 contract.
+// Dependency-free validation of the JSON Schema subset used by the v1/v2 contracts.
 // Semantic model/result consistency is additionally checked by src/play/dnaLab.ts.
 import { readFile, stat } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 const schema = JSON.parse(await readFile(new URL('../docs/dinosaur-export.schema.json', import.meta.url), 'utf8'));
+const hybridSchema = JSON.parse(await readFile(new URL('../docs/dinosaur-hybrid-export.schema.json', import.meta.url), 'utf8'));
 export function validateContractShape(value) {
   const errors = [];
   function check(v, s, path) {
@@ -30,7 +31,7 @@ export function validateContractShape(value) {
       }
     }
   }
-  check(value,schema,'export'); return errors;
+  check(value,value?.version === 2 ? hybridSchema : schema,'export'); return errors;
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
@@ -39,6 +40,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     if ((await stat(file)).size > 100_000) throw new Error('Export exceeds the 100 KB import limit.');
     const errors = validateContractShape(JSON.parse(await readFile(file,'utf8')));
     if (errors.length) throw new Error(errors.join('\n'));
-    console.log('Valid Genesis Lab v1 export shape. Check model/result consistency with validateExport before importing.');
+    console.log('Valid Genesis Lab export shape. Check model/result/blueprint consistency with validateExport before importing.');
   } catch(e) { console.error(e.message); process.exitCode = 1; }
 }

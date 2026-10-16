@@ -108,7 +108,7 @@ const BACKUP_KEY = 'genesis-lab:backup';
 const ACTIVE_SESSION_KEY = 'genesis-lab:active-session';
 const ACTIVE_PLACEMENT_KEY = 'genesis-lab:active-placement';
 
-export const PROFILE_VERSION = 6;
+export const PROFILE_VERSION = 7;
 
 export function todayKey(now = new Date()): string {
   const y = now.getFullYear();

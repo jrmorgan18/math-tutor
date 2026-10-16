@@ -1,6 +1,7 @@
 import type { Setup } from '../../play/dnaLab';
 import { dinoById } from '../../content/dinosaurs';
 import type { ToyKind } from '../../play/paddock';
+import { partSources, sampleColor } from '../../play/hybrids';
 
 /** All art is inline SVG, shared by the living scene and the photo renderer. */
 export function Landscape() {
@@ -35,31 +36,42 @@ export function Landscape() {
   </>;
 }
 export function DinosaurArt({ id, happy = false, setup }: { id: string; happy?: boolean; setup?: Setup }) {
-  const color = setup && setup.appearance.color !== 'sample' ? ({ mint: '#69d6b1', coral: '#f28b78', violet: '#b5a0f5' })[setup.appearance.color] : dinoById(id)?.color ?? '#73ae71';
+  const color = setup && setup.appearance.color !== 'sample' ? ({ mint: '#69d6b1', coral: '#f28b78', violet: '#b5a0f5' })[setup.appearance.color] : sampleColor(id, setup?.hybrid);
+  const parts = partSources(id, setup?.hybrid);
+  const accent = setup?.hybrid ? dinoById(setup.hybrid.donorSpeciesId)!.color : color;
   const tail = setup?.traits.tail ?? 1, legs = setup?.traits.legs ?? 1, mass = Math.sqrt(setup?.traits.mass ?? 1);
   const pattern = setup?.appearance.pattern ?? 'plain';
   const flyer = id === 'pteranodon';
   const longNeck = ['brachiosaurus', 'parasaurolophus'].includes(id);
-  return <g className={happy ? 'dinosaur-art happy' : 'dinosaur-art'}>
+  return <g className={happy ? 'dinosaur-art happy' : 'dinosaur-art'} data-hybrid-head={setup?.hybrid ? parts.head : undefined} data-hybrid-back={setup?.hybrid ? parts.back : undefined} data-hybrid-tail={setup?.hybrid ? parts.tail : undefined}>
     <ellipse cy="33" rx="45" ry="10" fill="#244330" opacity=".2"/>
+    {setup?.hybrid && parts.back === 'pteranodon' && !flyer && <path d="M-5 -5 Q-50 -70 -77 -43 L-40 5 L0 9 M7 -6 Q30 -65 76 -42 L45 8 L9 9" fill={accent} stroke="#304750" strokeWidth="2"/>}
     {flyer ? <>
       <path d="M-4 0 Q-30 -45 -65 -25 L-37 13 L-6 9 M4 0 Q30 -45 65 -25 L37 13 L6 9" fill={color} stroke="#304750" strokeWidth="3"/>
       <ellipse cy="1" rx={15 * mass} ry={24 * mass} fill={color}/>{setup && <path d={`M-5 19 l-4 ${10 * legs} M5 19 l4 ${10 * legs} M0 15 L${-30 * tail} 23`} stroke={color} strokeWidth="5"/>}
-      {pattern !== 'plain' && <path d="M-9 -10 h18 M-9 2 h18" stroke="#253b53" strokeWidth={pattern === 'spots' ? 6 : 3} strokeDasharray={pattern === 'spots' ? '2 6' : undefined} opacity=".4"/>}<path d="M0 -21 L-18 -47 L13 -29 L35 -18 L8 -12Z" fill={color}/><path d="M12 -26 L44 -18 L12 -16" fill="#e4b573"/><circle cx="5" cy="-24" r="3" fill="#172b32"/>
+      {pattern !== 'plain' && <path d="M-9 -10 h18 M-9 2 h18" stroke="#253b53" strokeWidth={pattern === 'spots' ? 6 : 3} strokeDasharray={pattern === 'spots' ? '2 6' : undefined} opacity=".4"/>}
+      {parts.head === 'pteranodon' ? <><path d="M0 -21 L-18 -47 L13 -29 L35 -18 L8 -12Z" fill={color}/><path d="M12 -26 L44 -18 L12 -16" fill="#e4b573"/><circle cx="5" cy="-24" r="3" fill="#172b32"/></> : <><ellipse cx="12" cy="-22" rx="25" ry="17" fill={color} stroke="#304750" strokeWidth="2"/><circle cx="19" cy="-28" r="3" fill="#172b32"/><path d="M15 -14 Q26 -7 35 -16" fill="none" stroke="#304750" strokeWidth="2"/>{['trex','indominus','velociraptor','spinosaurus','dilophosaurus'].includes(parts.head) && <path d="M18 -13 l4 5 l4 -5 l4 4" fill="#fff4cf"/>}</>}
+      {setup?.hybrid && parts.head === 'triceratops' && <path d="M-4 -30 L-10 -55 L6 -37 L19 -51 L15 -29" fill="#f1e7be" stroke="#706950" strokeWidth="2"/>}
+      {setup?.hybrid && ['stegosaurus','spinosaurus','ankylosaurus'].includes(parts.back) && [-18,0,18].map(x => <path key={x} d={`M${x-7} -7 L${x} -32 L${x+7} -7Z`} fill={accent} stroke="#304750" strokeWidth="2"/>)}
+      {setup?.hybrid && parts.tail === 'ankylosaurus' && <><path d={`M0 13 L${-42 * tail} 22`} stroke={color} strokeWidth="9"/><ellipse cx={-48 * tail} cy="22" rx="12" ry="8" fill={accent}/></>}
+      {setup?.hybrid && parts.tail === 'stegosaurus' && <path d={`M${-27 * tail} 18 l-22 -13 l13 15 l-18 7 l24 -1`} fill="#e8d5a0" stroke="#65553f" strokeWidth="2"/>}
     </> : <>
-      <g transform={`translate(-25 0) scale(${tail} 1) translate(25 0)`}><path d={id === 'ankylosaurus' ? 'M-30 5 Q-65 -5 -73 10' : 'M-30 5 Q-67 4 -74 -22 Q-59 -9 -25 -13'} fill={color} stroke={color} strokeWidth="10" strokeLinecap="round"/>
-      {id === 'ankylosaurus' && <ellipse cx="-72" cy="9" rx="12" ry="9" fill="#616d80"/>}
+      <g transform={`translate(-25 0) scale(${tail} 1) translate(25 0)`}><path d={parts.tail === 'ankylosaurus' ? 'M-30 5 Q-65 -5 -73 10' : 'M-30 5 Q-67 4 -74 -22 Q-59 -9 -25 -13'} fill={color} stroke={color} strokeWidth="10" strokeLinecap="round"/>
+      {parts.tail === 'ankylosaurus' && <ellipse cx="-72" cy="9" rx="12" ry="9" fill="#616d80"/>}
+      {setup?.hybrid && parts.tail === 'stegosaurus' && <path d="M-62 -9 L-82 -27 L-72 -3 L-89 0 L-66 5" fill="#e8d5a0" stroke="#65553f" strokeWidth="2"/>}
       </g><g transform={`translate(0 12) scale(1 ${legs}) translate(0 -12)`}><path d="M-21 15 L-25 32 L-10 32 L-5 15 M13 15 L16 32 L31 32 L29 10" fill={color} stroke="#304750" strokeWidth="2"/>
       </g><ellipse cx="0" cy="0" rx={40 * mass} ry={24 * mass} fill={color} stroke="#304750" strokeWidth="3"/>
       {pattern === 'spots' && [-20,0,20].map(x => <circle key={x} cx={x * mass} cy="-5" r="6" fill="#253b53" opacity=".4"/>)}
       {pattern === 'stripes' && [-20,0,20].map(x => <path key={x} d={`M${x * mass} -15 l-5 22`} stroke="#253b53" strokeWidth="6" opacity=".4"/>)}
-      {['stegosaurus','spinosaurus'].includes(id) && [-28,-10,8,25].map(x => <path key={x} d={`M${x-9} -17 L${x} -44 L${x+9} -20Z`} fill={id === 'stegosaurus' ? '#e6be72' : '#d78a56'} stroke="#65553f" strokeWidth="2"/>)}
-      {id === 'ankylosaurus' && [-23,-5,13].map(x => <path key={x} d={`M${x-8} -12 L${x} -27 L${x+8} -12`} fill="#b9c1b0"/>)}
-      {id === 'triceratops' && <ellipse cx="28" cy="-12" rx="21" ry="29" fill="#b95f44" stroke="#663d33" strokeWidth="2"/>}
+      {['stegosaurus','spinosaurus'].includes(parts.back) && [-28,-10,8,25].map(x => <path key={x} d={`M${x-9} -17 L${x} ${setup?.hybrid && parts.back === 'spinosaurus' ? -58 : -44} L${x+9} -20Z`} fill={parts.back === 'stegosaurus' ? '#e6be72' : '#d78a56'} stroke="#65553f" strokeWidth="2"/>)}
+      {parts.back === 'ankylosaurus' && [-23,-5,13].map(x => <path key={x} d={`M${x-8} -12 L${x} -27 L${x+8} -12`} fill="#b9c1b0"/>)}
+      {parts.head === 'triceratops' && <ellipse cx="28" cy="-12" rx="21" ry="29" fill="#b95f44" stroke="#663d33" strokeWidth="2"/>}
       {longNeck && <path d="M19 0 Q38 -30 34 -63 L52 -63 Q56 -20 39 8Z" fill={color} stroke="#304750" strokeWidth="2"/>}
       <g transform={longNeck ? 'translate(5 -52)' : ''}>
         <ellipse cx="41" cy="-12" rx="23" ry="17" fill={color} stroke="#304750" strokeWidth="3"/>
-        {id === 'triceratops' && <path d="M41 -24 L50 -45 L50 -23 M56 -14 L71 -24 L64 -8" fill="#f1e7be" stroke="#706950" strokeWidth="2"/>}
+        {parts.head === 'triceratops' && <path d="M41 -24 L50 -45 L50 -23 M56 -14 L71 -24 L64 -8" fill="#f1e7be" stroke="#706950" strokeWidth="2"/>}
+        {setup?.hybrid && parts.head === 'pteranodon' && <><path d="M40 -26 L23 -49 L58 -21" fill={accent}/><path d="M57 -18 L85 -8 L58 -3" fill="#e4b573"/></>}
+        {setup?.hybrid && ['trex','indominus','velociraptor','spinosaurus','dilophosaurus'].includes(parts.head) && <path d="M48 -4 l4 6 l4 -6 l4 5" fill="#fff4cf"/>}
         <circle cx="47" cy="-17" r="4" fill="#f4f4dc"/><circle cx="48" cy="-17" r="2" fill="#172b32"/>
         <path d="M47 -3 Q55 3 61 -5" fill="none" stroke="#304750" strokeWidth="2.5" strokeLinecap="round"/>
       </g>
