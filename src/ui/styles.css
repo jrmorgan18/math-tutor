@@ -1406,3 +1406,22 @@ input[type='text'] {
 .delete-photo-confirm .btn { margin-right: 8px; }
 @media (max-width: 800px) { .paddock-workspace { display: block; } .paddock-world { position: static; } .resident-choice { flex-basis: 105px; } .paddock-heading .btn { padding: 0 14px; } }
 @media (prefers-reduced-motion: reduce) { .habitat-resident { transition: none; } .happy { animation: none; } .paddock-app .btn { transition: none; } }
+/* Learning evidence and whole-egg sharing keep tablet controls readable. */
+.sharing-pad { width: 100%; margin: 12px 0; }
+.sharing-basket { padding: 12px; border: 1px solid var(--green); border-radius: 12px; text-align: center; }
+.sharing-nests { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 12px; }
+.sharing-nest { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; text-align: center; }
+.sharing-deal { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 100px; padding: 12px; background: var(--bg-raised); color: var(--text); border: 0; font: inherit; cursor: pointer; }
+.sharing-eggs { display: block; min-height: 28px; overflow-wrap: anywhere; font-size: 20px; }
+.sharing-nest .btn { min-height: 44px; width: 100%; }
+.learning-diagram { display: block; width: 100%; max-width: 370px; max-height: 260px; margin: 0 auto; color: var(--text); }
+.learning-evidence { margin: 7px 0; line-height: 1.6; font-size: 0.875rem; }
+.learning-evidence summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; text-decoration: underline; }
+.learning-evidence summary::before { content: '＋'; margin-right: 7px; }
+.learning-evidence details[open] summary::before { content: '−'; }
+.learning-table-scroll { overflow-x: auto; }
+.learning-table { border-collapse: collapse; width: 100%; text-align: left; font-size: 0.875rem; }
+.learning-table caption { caption-side: bottom; text-align: left; padding-top: 8px; }
+.learning-table th, .learning-table td { padding: 7px; border-bottom: 1px solid var(--line); }
+.learning-signal + .learning-signal, .weekly-skill + .weekly-skill { border-top: 1px solid var(--line); padding-top: 10px; }
+.learning-signal p { margin: 5px 0 12px; }

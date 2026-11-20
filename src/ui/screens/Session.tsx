@@ -91,6 +91,11 @@ export function Session() {
     const s = useStore.getState().session;
     const item = s?.plan[s.index];
     if (!s?.problem || !item) return;
+    if (item.supportStage && s.problem.representation.kind !== 'sharing') {
+      if (item.supportStage === 'guided') revealHintsTo(2);
+      if (item.supportStage === 'faded') revealHintsTo(1);
+      return;
+    }
     if (item.remediationStage === 'concrete') {
       revealHintsTo(2);
       return;
@@ -217,6 +222,7 @@ export function Session() {
         <div className="small dim">
           {item?.retry ? 'Try one more' : SLOT_LABEL[item?.slot ?? 'working']} ·{' '}
           {getSkill(problem.skillId).labName}
+          {item?.supportStage === 'guided' ? ' · Let’s build it' : item?.supportStage === 'faded' ? ' · A little support' : item?.supportStage === 'check' ? ' · Try a fresh one' : ''}
           {item?.slot === 'stretch' ? ' · meant to be hard' : ''}
         </div>
         {session.combo >= 3 ? (
@@ -409,6 +415,7 @@ export function Session() {
             </div>
 
             <AnswerPad
+              key={itemKey}
               representation={problem.representation}
               value={entry}
               disabled={false}
@@ -419,7 +426,7 @@ export function Session() {
               }}
               onBackspace={() => setEntryBoth(editEntry(entryRef.current, 'backspace', problem.representation))}
               onReplace={(next) => setEntryBoth(next.slice(0, 4))}
-              onSubmit={(value) => submit(problem.representation.kind === 'choice' ? value : entryRef.current)}
+              onSubmit={(value) => submit(problem.representation.kind === 'choice' || problem.representation.kind === 'sharing' ? value : entryRef.current)}
             />
           </>
         )

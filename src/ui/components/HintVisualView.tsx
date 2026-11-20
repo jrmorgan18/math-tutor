@@ -36,7 +36,37 @@ export function HintVisualView({ visual }: { visual: HintVisual }) {
       return <Polygon v={visual} />;
     case 'ruler':
       return <RulerBars v={visual} />;
+    case 'fractionline':
+      return <FractionLine v={visual} />;
+    case 'squaregrid':
+      return <SquareGrid v={visual} />;
   }
+}
+
+function FractionLine({ v }: { v: Extract<HintVisual, { kind: 'fractionline' }> }) {
+  return <div className="viz"><svg viewBox="0 0 360 95" className="learning-diagram" role="img"
+    aria-label={`Number line from zero to one with ${v.parts} equal intervals; the point is ${v.marked} intervals from zero`}>
+    <line x1="20" x2="340" y1="42" y2="42" stroke="currentColor" strokeWidth="2" />
+    {Array.from({ length: v.parts + 1 }, (_, i) => <line key={i} x1={20 + i * 320 / v.parts}
+      x2={20 + i * 320 / v.parts} y1="34" y2="50" stroke="currentColor" strokeWidth="2" />)}
+    <circle cx={20 + v.marked * 320 / v.parts} cy="42" r="7" fill="var(--green)" />
+    <text x="20" y="77" textAnchor="middle" fill="currentColor" fontSize="18">0</text>
+    <text x="340" y="77" textAnchor="middle" fill="currentColor" fontSize="18">1</text>
+  </svg></div>;
+}
+
+function SquareGrid({ v }: { v: Extract<HintVisual, { kind: 'squaregrid' }> }) {
+  const cell = Math.min(32, 280 / v.cols), width = v.cols * cell, height = v.rows * cell;
+  return <div className="viz"><svg viewBox={`0 0 ${width + 70} ${height + 60}`} className="learning-diagram" role="img"
+    aria-label={`Rectangle ${v.rows} units by ${v.cols} units${v.showGrid ? ', divided into unit squares' : ''}`}>
+    <rect x="45" y="15" width={width} height={height} fill="var(--green)" fillOpacity="0.18" stroke="currentColor" strokeWidth="2" />
+    {v.showGrid ? <g stroke="currentColor" strokeOpacity="0.55">
+      {Array.from({ length: v.cols - 1 }, (_, i) => <line key={`c${i}`} x1={45 + (i + 1) * cell} x2={45 + (i + 1) * cell} y1="15" y2={15 + height} />)}
+      {Array.from({ length: v.rows - 1 }, (_, i) => <line key={`r${i}`} x1="45" x2={45 + width} y1={15 + (i + 1) * cell} y2={15 + (i + 1) * cell} />)}
+    </g> : null}
+    <text x="23" y={20 + height / 2} textAnchor="middle" fill="currentColor" fontSize="18">{v.rows}</text>
+    <text x={45 + width / 2} y={height + 43} textAnchor="middle" fill="currentColor" fontSize="18">{v.cols}</text>
+  </svg></div>;
 }
 
 /* ------------------------------------------------------------- fractions */

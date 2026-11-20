@@ -200,7 +200,8 @@ export function applyAttempt(
 
   // Asking for help then solving it scores 0.6 rather than 1.0. Getting it
   // wrong after hints still scores 0.
-  const score = attempt.correct ? (attempt.hintsUsed > 0 ? 0.6 : 1) : 0;
+  const supported = !isIndependent(attempt);
+  const score = attempt.correct ? (supported ? 0.6 : 1) : 0;
 
   next.attempts += 1;
   next.accuracy =
@@ -208,7 +209,6 @@ export function applyAttempt(
       ? score
       : state.accuracy + ACCURACY_ALPHA * (score - state.accuracy);
 
-  const supported = !isIndependent(attempt);
   if (supported) {
     next.supportedAttempts = state.supportedAttempts + 1;
     next.supportedAccuracy = ewma(state.supportedAccuracy, attempt.correct ? 1 : 0);

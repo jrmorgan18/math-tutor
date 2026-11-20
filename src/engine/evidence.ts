@@ -3,7 +3,8 @@ import { getSkill } from './skills';
 
 export function isIndependent(a: Attempt): boolean {
   return a.hintsUsed === 0 && !(a.automaticHints ?? 0) && !(a.requestedHints ?? 0)
-    && a.remediationStage !== 'concrete' && a.remediationStage !== 'faded';
+    && a.remediationStage !== 'concrete' && a.remediationStage !== 'faded'
+    && a.supportStage !== 'guided' && a.supportStage !== 'faded';
 }
 
 export function demonstratedLevel(state: SkillState): number {

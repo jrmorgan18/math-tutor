@@ -179,6 +179,12 @@ export function migrateProfile(raw: unknown, attempts?: Attempt[]): Profile | nu
   // Additive: new skills appear at level 1, existing ones keep their state,
   // then anything whose prerequisites he has already cleared opens up.
   const reconciled = reconcileSkillStates(p.skillStates as Record<SkillId, SkillState>);
+  // Start the new component skills with probes matching prior clock exposure.
+  // No evidence, proficiency, rewards, or historical attempts are manufactured.
+  if (!p.skillStates['clock-reading'] && (reconciled['time-clock']?.demonstratedLevel ?? 0) >= 3) {
+    reconciled['clock-reading'] = { ...reconciled['clock-reading']!, level: 4 };
+    if (!p.skillStates['elapsed-time']) reconciled['elapsed-time'] = { ...reconciled['elapsed-time']!, level: 2 };
+  }
   const skillStates = propagateUnlocks(attempts ? verifyLegacyEvidence(reconciled, attempts) : reconciled);
 
   return {

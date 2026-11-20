@@ -1,14 +1,17 @@
 import { conceptProficient, practiceLevel } from './evidence';
+import { supportStageFor } from './learning';
 import { Rng, randomSeed } from './rng';
 import { generate } from './generators';
 import { getSkill, SKILLS, STRAND_NAMES, topoSortedSkills } from './skills';
 import type {
   BossMeta,
+  Attempt,
   ErrorType,
   SessionSlot,
   SkillId,
   SkillState,
   StrandId,
+  SupportStage,
 } from './types';
 
 export interface PlannedItem {
@@ -25,6 +28,7 @@ export interface PlannedItem {
   retry?: boolean;
   remediationStage?: 'concrete' | 'faded' | 'transfer';
   targetError?: ErrorType;
+  supportStage?: SupportStage;
   boss?: BossMeta;
 }
 
@@ -40,6 +44,8 @@ export interface SessionOptions {
   focusStrand?: StrandId;
   /** The caller makes this occasional, normally every third completed run. */
   includeBoss?: boolean;
+  /** Retained evidence lets support adapt without resetting a learner's state. */
+  history?: Attempt[];
 }
 
 /**
@@ -185,6 +191,9 @@ export function buildSession(
     ordered = insertBossInvestigation(ordered, states, options.focusStrand, rng);
   }
 
+  ordered = addTargetedCheck(ordered, states, now);
+  ordered = separateTimePractice(ordered, states, options.history ?? []);
+  ordered = ordered.map(item => refreshSupportItem(item, options.history ?? []));
   ordered = applyMisconceptionStages(ordered, states).map(retargetPlannedItem);
 
   // Always finish on something he can do. A session that ends in a failure is
@@ -249,7 +258,7 @@ function pickFor(slot: SessionSlot, i: number, ctx: PickCtx): PlannedItem | null
       // then a harder tier of something he is already working on.
       const frontier = nextLockedSkill(ctx.states);
       if (frontier && i === 0) {
-        return { slot, skillId: frontier, level: 1, seed };
+        return { slot, skillId: frontier, level: practiceLevel(ctx.states[frontier]!), seed };
       }
       const s = ctx.workingPool[i % Math.max(1, ctx.workingPool.length)];
       if (!s) return null;
@@ -349,6 +358,40 @@ function nextLockedSkill(states: Record<SkillId, SkillState>): SkillId | null {
   return null;
 }
 
+/** Keep a small, rotating check on foundational skills outside today's mission. */
+function addTargetedCheck(items: PlannedItem[], states: Record<SkillId, SkillState>, now: number): PlannedItem[] {
+  const active = new Set(items.filter(i => i.slot === 'working').map(i => i.skillId));
+  const target = ['function-machine', 'missing-addend', 'sub-100']
+    .map(id => states[id]).filter((s): s is SkillState => !!s?.unlocked && !conceptProficient(s) &&
+      !active.has(s.skillId) && (s.lastSeenAt === null || now - s.lastSeenAt >= 3 * 86_400_000))
+    .sort((a, b) => (a.lastSeenAt ?? 0) - (b.lastSeenAt ?? 0))[0];
+  if (!target) return items;
+  const replaced = [...items].reverse().find(i => i.slot === 'working')?.skillId;
+  if (!replaced) return items;
+  return items.map(item => item.slot === 'working' && item.skillId === replaced ? { slot: 'working', skillId: target.skillId,
+    level: practiceLevel(target), seed: item.seed } : item);
+}
+
+/** A combined task cannot tell us whether reading or counting on needs help. */
+function separateTimePractice(items: PlannedItem[], states: Record<SkillId, SkillState>, history: Attempt[]): PlannedItem[] {
+  if (!supportStageFor('time-clock', 4, history)) return items;
+  const component = ['clock-reading', 'elapsed-time'].map(id => states[id])
+    .filter((s): s is SkillState => !!s?.unlocked && !conceptProficient(s))
+    .sort((a, b) => (a.lastSeenAt ?? 0) - (b.lastSeenAt ?? 0))[0];
+  if (!component) return items;
+  return items.map(item => {
+    if (item.skillId !== 'time-clock' || item.slot !== 'working') return item;
+    return { slot: 'working', skillId: component.skillId, level: practiceLevel(component), seed: item.seed };
+  });
+}
+
+/** Re-evaluated before displaying an item, so a hinted check returns to support. */
+export function refreshSupportItem(item: PlannedItem, history: Attempt[]): PlannedItem {
+  if (item.slot !== 'working' || item.retry || item.remediationStage) return item;
+  const supportStage = supportStageFor(item.skillId, item.level, history);
+  return { ...item, supportStage };
+}
+
 /** A misconception becomes actionable after it appears twice in the last six misses. */
 export function dominantMisconception(state: SkillState): ErrorType | null {
   const recent = state.recentErrors.slice(-6);
@@ -397,7 +440,7 @@ function applyMisconceptionStages(
   const stages = ['concrete', 'faded', 'transfer'] as const;
   const seen = new Map<SkillId, number>();
   return items.map((item) => {
-    if (item.slot !== 'working') return item;
+    if (item.slot !== 'working' || item.supportStage) return item;
     const state = states[item.skillId];
     if (!state) return item;
     const targetError = dominantMisconception(state);

@@ -6,7 +6,7 @@ Runs locally in the browser; everything is stored on the device.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 181 tests
+npm test           # 219 tests
 npm run build      # static output in dist/
 ```
 
@@ -90,6 +90,37 @@ Four decisions prevent that, and they drive the whole codebase:
 ---
 
 ## How it fits together
+
+### Learning progression and independent evidence
+
+Successful locked stretch skills advance to their next evidenced tier while
+ordinary lessons continue to respect prerequisites. Repeated supported answers
+start a guided → faded → fresh-check cycle. Division with remainders can be
+built by sharing whole eggs among nests; guided work never establishes
+independent proficiency. A hinted check returns to lighter support, and three
+fresh independent successes retire the cycle.
+
+Clock reading to five minutes and elapsed time from written times are separate
+skills, alongside the existing combined clock problems. Persistent support on
+the combined task schedules the component skills so the learner can practise
+the part that needs attention. Existing clock evidence seeds practice probes
+without manufacturing mastery or changing historical questions.
+
+Sessions also rotate neglected function-machine, missing-number, and
+subtraction skills into ordinary practice. New content includes 6 and 8 times
+tables, area in square units, equivalent fractions, and fraction number lines.
+All new skills are merged into saved profiles without resetting progress.
+
+The parent view and weekly report show raw independent success counts,
+requested and automatic support, and evidence by difficulty, including
+stretch-only skills. Alerts identify repeated supported work and repeated
+success without a higher-difficulty probe. Guided and faded practice are
+reported as supported even when no hint button was pressed.
+
+`tests/learning.test.ts` checks progression, support fading, time components,
+targeted scheduling, reports, and additive profile upgrades. For an additional
+read-only check against a local export, set `GENESIS_REFERENCE_EXPORTS` to its
+path before running the tests; export contents are never committed or uploaded.
 
 ```
 engine/          pure, testable, no React

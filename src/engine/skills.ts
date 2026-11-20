@@ -138,6 +138,10 @@ export const SKILLS: Skill[] = [
     latencyBandMs: [15000, 16000, 18000, 20000],
     fluency: false,
   },
+  {
+    id: 'mult-6-8', strand: 'multdiv', name: 'Times tables: 6, 8', labName: 'DNA Strands III',
+    requires: ['mult-3-4'], maxLevel: 3, latencyBandMs: [10000, 8000, 6000], fluency: true,
+  },
 
   // ------------------------------------------------------------- fractions
   /**
@@ -165,6 +169,11 @@ export const SKILLS: Skill[] = [
     latencyBandMs: [18000, 20000, 22000, 25000],
     fluency: false,
   },
+  {
+    id: 'fraction-equivalence', strand: 'fractions', name: 'Equivalent fractions and number lines',
+    labName: 'Matching Amber', requires: ['fraction-parts'], maxLevel: 3,
+    latencyBandMs: [18000, 20000, 22000], fluency: false,
+  },
 
   // ----------------------------------------------------------- measurement
   {
@@ -187,6 +196,16 @@ export const SKILLS: Skill[] = [
     maxLevel: 4,
     latencyBandMs: [16000, 18000, 20000, 22000],
     fluency: false,
+  },
+  {
+    id: 'clock-reading', strand: 'measurement', name: 'Reading a clock to five minutes',
+    labName: 'Clock Scanner', requires: [], maxLevel: 4,
+    latencyBandMs: [16000, 18000, 20000, 22000], fluency: false,
+  },
+  {
+    id: 'elapsed-time', strand: 'measurement', name: 'Elapsed time from written times',
+    labName: 'Expedition Planner', requires: ['add-20', 'skip-count'], maxLevel: 3,
+    latencyBandMs: [18000, 22000, 25000], fluency: false,
   },
   {
     id: 'measure-length',
@@ -219,6 +238,11 @@ export const SKILLS: Skill[] = [
     maxLevel: 3,
     latencyBandMs: [20000, 22000, 25000],
     fluency: false,
+  },
+  {
+    id: 'area', strand: 'geometry', name: 'Area in square units', labName: 'Habitat Floor Plans',
+    requires: ['mult-concept', 'shapes-2d'], maxLevel: 3,
+    latencyBandMs: [18000, 22000, 28000], fluency: false,
   },
 
   // ------------------------------------------------------------- reasoning

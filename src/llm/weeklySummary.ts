@@ -1,6 +1,6 @@
 import { conceptProficient } from '../engine/evidence';
+import { buildLearningReports, type SkillLearningReport } from '../engine/learning';
 import { ERROR_LABELS } from '../engine/errors';
-import { getSkill, skillExists } from '../engine/skills';
 import type { Attempt, ErrorType, SkillId, SkillState } from '../engine/types';
 
 /**
@@ -31,10 +31,7 @@ export interface WeeklyDigest {
   requestedSupportCount: number;
   legacySupportCount: number;
   /** Skills worked on, best-first by accuracy. */
-  perSkill: Array<{
-    skillId: SkillId;
-    name: string;
-    attempts: number;
+  perSkill: Array<SkillLearningReport & {
     accuracyPct: number;
     level: number;
     proficient: boolean;
@@ -60,7 +57,7 @@ export function buildWeeklyDigest(
   windowDays = 7,
 ): WeeklyDigest {
   const from = now - windowDays * DAY;
-  const recent = attempts.filter((a) => a.at >= from);
+  const recent = attempts.filter((a) => a.at >= from && a.at <= now);
   const scored = recent.filter((a) => a.slot !== 'stretch');
 
   const correct = scored.filter((a) => a.correct).length;
@@ -75,23 +72,12 @@ export function buildWeeklyDigest(
     lastAt = a.at;
   }
 
-  const bySkill = new Map<SkillId, { attempts: number; correct: number }>();
-  for (const a of scored) {
-    const row = bySkill.get(a.skillId) ?? { attempts: 0, correct: 0 };
-    row.attempts++;
-    if (a.correct) row.correct++;
-    bySkill.set(a.skillId, row);
-  }
-
-  const perSkill = [...bySkill.entries()]
-    .filter(([id]) => skillExists(id))
-    .map(([skillId, row]) => ({
-      skillId,
-      name: getSkill(skillId).name,
-      attempts: row.attempts,
-      accuracyPct: Math.round((row.correct / row.attempts) * 100),
-      level: skillStates[skillId]?.demonstratedLevel ?? 0,
-      proficient: conceptProficient(skillStates[skillId]),
+  const perSkill = buildLearningReports(recent, skillStates)
+    .map(row => ({
+      ...row,
+      accuracyPct: row.attempts ? Math.round((row.correct / row.attempts) * 100) : 0,
+      level: skillStates[row.skillId]?.demonstratedLevel ?? 0,
+      proficient: conceptProficient(skillStates[row.skillId]),
     }))
     .sort((a, b) => b.attempts - a.attempts);
 
@@ -129,7 +115,7 @@ export function buildWeeklyDigest(
     // Six attempts is the floor for calling something a struggle rather than
     // a bad morning.
     strugglingWith: perSkill
-      .filter((s) => s.attempts >= 6 && s.accuracyPct < 60)
+      .filter((s) => (s.attempts >= 6 && s.accuracyPct < 60) || s.signals.some(signal => signal.kind === 'support'))
       .map((s) => s.name),
     newlyProficient: perSkill.filter((s) => s.proficient).map((s) => s.name),
   };

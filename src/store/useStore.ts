@@ -1,5 +1,6 @@
 import type { LabState } from '../play/dnaLab';
-import { conceptProficient } from '../engine/evidence';
+import { conceptProficient, isIndependent } from '../engine/evidence';
+import { withLearningSupport } from '../engine/learning';
 import type { PaddockState } from '../play/paddock';
 import { create } from 'zustand';
 import { generate } from '../engine/generators';
@@ -18,6 +19,7 @@ import {
 import {
   buildSession,
   retargetPlannedItem,
+  refreshSupportItem,
   type MissionChoice,
   type PlannedItem,
 } from '../engine/scheduler';
@@ -101,7 +103,7 @@ function generateForSession(item: PlannedItem, hatched: string[]) {
   const problem = item.boss
     ? generateBossProblem(item.boss, item.skillId, item.level)
     : generate(item.skillId, item.level, item.seed);
-  return personalizeFlavor(problem, hatched, item.seed);
+  return personalizeFlavor(withLearningSupport(problem, item.supportStage), hatched, item.seed);
 }
 
 export type Screen =
@@ -418,6 +420,7 @@ export const useStore = create<Store>((set, get) => ({
     const { profile, selectedMission } = get();
     if (!profile) return;
     const plan = buildSession(profile.skillStates, Date.now(), randomSeed(), {
+      history: get().attempts,
       focusStrand: selectedMission?.strand,
       includeBoss: (profile.sessionsCompleted + 1) % 3 === 0,
     });
@@ -485,6 +488,7 @@ export const useStore = create<Store>((set, get) => ({
       retry: item.retry,
       remediationStage: item.remediationStage,
       targetError: item.targetError,
+      supportStage: item.supportStage,
       conceptTags: s.problem.meta?.tags,
       boss: item.boss,
     };
@@ -523,7 +527,7 @@ export const useStore = create<Store>((set, get) => ({
       // Hints halve the reward but never zero it — asking for help must stay
       // clearly better than guessing. A retry is a second bite, so it pays
       // less than getting it right first time but more than nothing.
-      award = s.hintsUsed > 0 ? Math.max(1, Math.floor(base / 2)) : base;
+      award = !isIndependent(attempt) ? Math.max(1, Math.floor(base / 2)) : base;
       if (item.retry) award = Math.max(1, Math.floor(award / 2));
       award += comboBonus;
       award = Math.min(award, remainingToday);
@@ -693,14 +697,18 @@ export const useStore = create<Store>((set, get) => ({
       return;
     }
 
-    const item = s.plan[index];
-    if (!item) {
+    const planned = s.plan[index];
+    if (!planned) {
       await finishSession();
       return;
     }
 
+    const item = refreshSupportItem(planned, get().attempts);
+    const plan = s.plan.map((entry, i) => i === index ? item : entry);
+
     const session: SessionRun = {
         ...s,
+        plan,
         index,
         problem: generateForSession(item, profile?.hatched ?? []),
         itemStartedAt: Date.now(),

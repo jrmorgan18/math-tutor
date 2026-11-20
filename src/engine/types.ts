@@ -24,6 +24,8 @@ export type Representation =
    * more honest test of the concept than recalling a digit.
    */
   | { kind: 'build'; mode: 'tenframe' | 'array'; max: number }
+  /** Distribute whole eggs, keeping equal nests and a visible remainder. */
+  | { kind: 'sharing'; total: number; nests: number; ask: 'each' | 'leftover'; showEggs: boolean }
   /**
    * Enter a column sum one column at a time, right to left — ones first, then
    * tens, carrying as you go. Typing `81` as a single number hides whether he
@@ -119,7 +121,9 @@ export type HintVisual =
       symmetry?: boolean;
     }
   /** A ruler/bar measured in units, for length comparison. */
-  | { kind: 'ruler'; lengths: number[]; unit: string };
+  | { kind: 'ruler'; lengths: number[]; unit: string }
+  | { kind: 'fractionline'; parts: number; marked: number }
+  | { kind: 'squaregrid'; rows: number; cols: number; showGrid: boolean };
 
 /** One rung of the hint ladder: words, optionally with a picture. */
 export interface Hint {
@@ -204,6 +208,8 @@ export type ErrorType =
   | 'timeout'
   | 'other';
 
+export type SupportStage = 'guided' | 'faded' | 'check';
+
 export interface Attempt {
   id: string;
   skillId: SkillId;
@@ -237,6 +243,8 @@ export interface Attempt {
   retry?: boolean;
   /** Support is deliberately faded across concrete -> pictorial -> transfer. */
   remediationStage?: 'concrete' | 'faded' | 'transfer';
+  /** A supported learning cycle, separate from correction after a mistake. */
+  supportStage?: SupportStage;
   /** Misconception this item was selected to address. */
   targetError?: ErrorType;
   /** Structural tags copied from the generated problem for later diagnosis. */

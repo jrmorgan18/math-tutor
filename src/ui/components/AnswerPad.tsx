@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { sfx } from '../audio';
 import type { Representation } from '../../engine/types';
+import { SharingPad } from './SharingPad';
 
 /**
  * Answer input.
@@ -51,6 +52,8 @@ export function AnswerPad({
   onSubmit,
 }: Props) {
   const [demo, setDemo] = useState(() => typeof sessionStorage !== 'undefined' && sessionStorage.getItem('column-demo-v1') !== 'seen');
+  if (representation.kind === 'sharing') return <SharingPad representation={representation}
+    disabled={disabled} soundOn={soundOn} onSubmit={onSubmit} />;
   /**
    * Build mode: he taps out the quantity instead of typing a numeral.
    *

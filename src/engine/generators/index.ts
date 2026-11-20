@@ -7,6 +7,7 @@ import { functionMachine, word1Step } from './reasoning';
 import { fractionOfSet, fractionParts } from './fractions';
 import { measureLength, moneyCount, timeClock } from './measurement';
 import { perimeter, shapes2d } from './geometry';
+import { area, clockReading, elapsedTime, fractionEquivalence, mult68 } from './nextSteps';
 
 export type Generator = (level: number, seed: number) => Problem;
 
@@ -37,6 +38,11 @@ export const GENERATORS: Record<SkillId, Generator> = {
   'measure-length': measureLength,
   'shapes-2d': shapes2d,
   'perimeter': perimeter,
+  'clock-reading': clockReading,
+  'elapsed-time': elapsedTime,
+  'mult-6-8': mult68,
+  'area': area,
+  'fraction-equivalence': fractionEquivalence,
 };
 
 /** Generate a problem, clamping the level to what the skill actually defines. */

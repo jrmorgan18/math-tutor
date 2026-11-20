@@ -6,6 +6,8 @@ import { ERROR_COACHING, ERROR_LABELS } from '../../engine/errors';
 import { progressToward } from '../../engine/mastery';
 import { AVATAR_OPTIONS, exportAll, importAll } from '../../store/db';
 import { buildWeeklyDigest } from '../../llm/weeklySummary';
+import { buildLearningReports } from '../../engine/learning';
+import { LearningEvidence, LearningSignals } from '../components/LearningEvidence';
 import type { Attempt, ErrorType, SkillState } from '../../engine/types';
 
 export function Parent() {
@@ -21,6 +23,8 @@ export function Parent() {
   const [tab, setTab] = useState<'progress' | 'struggles' | 'weekly' | 'settings'>('progress');
   const importInputRef = useRef<HTMLInputElement>(null);
   const [backup, setBackup] = useState<{ at: number; reason: string; name: string } | null>(null);
+  const learningReports = useMemo(() => buildLearningReports(attempts.filter(a =>
+    a.at >= Date.now() - 7 * 86_400_000 && a.at <= Date.now()), profile?.skillStates ?? {}), [attempts, profile?.skillStates]);
 
   // Refreshed whenever the settings tab is opened, so the timestamp shown is
   // never a stale one from before the last export/import.
@@ -149,6 +153,7 @@ export function Parent() {
 
           <div className="card">
             <h3>Support and independent work</h3>
+            <p className="small dim">Skill evidence below covers the last seven days. Overall totals cover all recorded play.</p>
             <p className="small dim">Automatically shown support: {stats.automaticSupport} questions · Learner-requested hints: {stats.requestedSupport} questions · Older support with unknown origin: {stats.legacySupport} questions.</p>
             <h3>Reaching for hard things</h3>
             <p className="small dim" style={{ margin: 0 }}>
@@ -158,6 +163,8 @@ export function Parent() {
               excluded from accuracy, combos, mastery, and the rival score.
             </p>
           </div>
+
+          <LearningSignals reports={learningReports} />
 
           {Object.entries(STRAND_NAMES).map(([strand, label]) => {
             const skills = SKILLS.filter((s) => s.strand === strand);
@@ -177,17 +184,8 @@ export function Parent() {
                           {state.legacyLevel && state.legacyLevel > (state.demonstratedLevel ?? 0) ? ` · Earlier level ${state.legacyLevel} awaiting verification` : ''}
                           {skill.fluency ? ` · Fluency: ${state.fluent ? 'goal reached' : 'separate practice goal'}` : ''}
                         </div>
-                        {state.attempts > 0 ? (
-                          <div className="small dim">
-                            Independent {Math.round((state.independentAccuracy ?? 0) * 100)}%
-                            {state.supportedAttempts > 0
-                              ? ` · With support ${Math.round((state.supportedAccuracy ?? 0) * 100)}%`
-                              : ''}
-                            {state.retryAttempts > 0
-                              ? ` · Transfer ${state.retrySuccesses}/${state.retryAttempts}`
-                              : ''}
-                          </div>
-                        ) : null}
+                        {learningReports.find(r => r.skillId === skill.id) ?
+                          <LearningEvidence report={learningReports.find(r => r.skillId === skill.id)!} /> : null}
                         <div className="bar" style={{ marginTop: 5 }}>
                           <div
                             className={
@@ -234,11 +232,11 @@ export function Parent() {
 
       {tab === 'struggles' ? (
         <>
+          <LearningSignals reports={learningReports} />
           {struggles.length === 0 ? (
             <div className="card">
               <p className="small dim" style={{ margin: 0 }}>
-                Nothing to report yet — he needs a few sessions before the
-                patterns mean anything.
+                No recent mistakes in regular questions.
               </p>
             </div>
           ) : (
@@ -411,7 +409,7 @@ function WeeklyTab({
     () => buildWeeklyDigest(attempts, skillStates),
     [attempts, skillStates],
   );
-  if (digest.totalAttempts === 0) {
+  if (digest.totalAttempts === 0 && digest.stretchAttempted === 0) {
     return (
       <div className="card">
         <h3>This week</h3>
@@ -441,14 +439,17 @@ function WeeklyTab({
         </p>
       </div>
 
+      <LearningSignals reports={digest.perSkill} />
+
       <div className="card">
         <h3>What he worked on</h3>
         {digest.perSkill.map((s) => (
-          <div key={s.skillId} className="row between" style={{ padding: '7px 0' }}>
-            <div>
+          <div key={s.skillId} className="weekly-skill" style={{ padding: '10px 0' }}>
+            <div className="row between">
+            <div className="grow">
               <div style={{ fontSize: 15 }}>{s.name}</div>
               <div className="small dim">
-                {s.attempts} questions · demonstrated tier {s.level}
+                {s.attempts} regular questions · demonstrated tier {s.level}
                 {s.proficient ? ' · proficient' : ''}
               </div>
             </div>
@@ -457,15 +458,17 @@ function WeeklyTab({
               style={{
                 fontSize: 18,
                 color:
-                  s.accuracyPct >= 80
+                  !s.attempts ? 'var(--text-dim)' : s.accuracyPct >= 80
                     ? 'var(--green)'
                     : s.accuracyPct < 60
                       ? 'var(--red)'
                       : 'var(--text)',
               }}
             >
-              {s.accuracyPct}%
+              {s.attempts ? `${s.accuracyPct}%` : '—'}
             </div>
+            </div>
+            <LearningEvidence report={s} />
           </div>
         ))}
       </div>

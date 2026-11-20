@@ -1,5 +1,14 @@
 import type { Representation } from './types';
 
+/** Equal but incomplete sharing is a valid attempt; it is scored by the engine. */
+export function sharingAnswer(counts: number[], total: number, ask: 'each' | 'leftover'): string | null {
+  if (counts.length < 2 || counts.some(n => !Number.isInteger(n) || n < 0) ||
+    counts.some(n => n !== counts[0])) return null;
+  const used = counts.reduce((sum, n) => sum + n, 0);
+  if (used === 0 || used > total) return null;
+  return String(ask === 'each' ? counts[0] : total - used);
+}
+
 /** Semantic edits operate on the authoritative entry, including rapid taps. */
 export function editEntry(value: string, action: string, representation: Representation): string {
   if (action === 'backspace') return representation.kind === 'columns' ? value.slice(1) : value.slice(0, -1);
